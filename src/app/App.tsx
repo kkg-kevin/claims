@@ -2549,41 +2549,37 @@ function StatCards({ courses }: { courses: Course[] }) {
 // ─── Course Card ──────────────────────────────────────────────────────────────
 
 function CourseCard({ course, onClick }: { course: Course; onClick: () => void }) {
-  const pct = calcCompletion(course);
   return (
     <button onClick={onClick}
-      className="group w-full text-left bg-card rounded-2xl border border-border shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-[#38aae1]/40 transition-all duration-200 p-4 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="bg-[#e8f0f7] text-[#25476a] rounded-xl p-2 flex-shrink-0">{course.icon}</div>
-          <div className="min-w-0">
-            <p className="font-bold text-foreground text-sm leading-tight truncate">{course.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{course.locationName}</p>
+      className="group w-full min-h-[170px] text-left bg-card rounded-2xl border border-border shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-[#38aae1]/40 transition-all duration-200 p-5 flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="bg-[#e8f0f7] text-[#25476a] rounded-xl p-2.5 flex-shrink-0 ring-1 ring-[#25476a]/10">{course.icon}</div>
+          <div className="min-w-0 pt-0.5">
+            <p className="font-extrabold text-foreground text-base leading-tight truncate">{course.name}</p>
+            <p className="text-xs font-semibold text-muted-foreground mt-1 truncate">{course.locationName}</p>
           </div>
         </div>
-        <ChevronRight size={15} className="text-muted-foreground group-hover:text-[#38aae1] mt-1 flex-shrink-0 transition-colors" />
+        <div className="h-8 w-8 rounded-full bg-[#e8f0f7] text-[#25476a] flex items-center justify-center flex-shrink-0 group-hover:bg-[#25476a] group-hover:text-white transition-colors">
+          <ChevronRight size={16} />
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <LocationIcon type={course.locationType} />
+      <div className="flex items-center justify-between gap-2 rounded-xl bg-[#f5f9fc] px-3 py-2">
+        <div className="flex items-center gap-2 min-w-0" title={LOCATION_LABELS[course.locationType]}>
+          <LocationIcon type={course.locationType} />
+          <span className="text-xs font-semibold text-muted-foreground truncate">{course.locationName}</span>
+        </div>
         <StatusBadge status={course.claimStatus} />
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs text-muted-foreground">Completion</span>
-          <span className="text-xs font-bold" style={{ color: pct >= 100 ? "#16a34a" : pct >= 50 ? "#d97706" : "#25476a" }}>{pct}%</span>
+      <div className="mt-auto flex items-end justify-between gap-3 pt-1">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sessions</p>
+          <p className="text-sm font-extrabold text-foreground leading-tight">
+            {course.sessions.filter((s) => s.attended).length}/{course.totalSessions}
+          </p>
         </div>
-        <ProgressBar pct={pct} color={pct >= 100 ? "#16a34a" : pct >= 50 ? "#feb139" : "#38aae1"} />
-      </div>
-
-      <div className="flex items-center justify-between pt-1 border-t border-border">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Users size={10} />{course.students.length}</span>
-          <span className="flex items-center gap-1"><Clock size={10} />{totalHours(course)}h</span>
-          <span className="flex items-center gap-1"><ClipboardList size={10} />{course.assignments.length}</span>
-        </div>
-        <span className="text-sm font-bold text-[#25476a] font-mono">KSh {calcTotalEarning(course).toLocaleString()}</span>
       </div>
     </button>
   );
@@ -2716,7 +2712,7 @@ export default function App() {
                 <p className="text-muted-foreground text-sm">No courses match your filters.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filtered.map((course) => (
                   <CourseCard key={course.id} course={course} onClick={() => setSelectedId(course.id)} />
                 ))}
