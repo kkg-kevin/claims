@@ -277,6 +277,10 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
   const idx = sessions.findIndex((s) => s.id === sessionId);
   const session = sessions[idx];
   const sessionAssignments = getSessionAssignmentRecords(course);
+  const recordsForSession = sessionAssignments.filter((record) => record.sessionId === sessionId);
+  const gradedCount = recordsForSession.filter((record) => record.status === "graded").length;
+  const submittedCount = recordsForSession.filter((record) => record.status === "submitted").length;
+  const issuedCount = recordsForSession.filter((record) => record.status === "issued").length;
 
   const [assignDetail, setAssignDetail] = useState<{
     student: Student;
@@ -287,6 +291,7 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
   if (!session) return (
     <div className="p-6 bg-card border border-border rounded-2xl">Session not found.</div>
   );
+  const assignmentForSession = makeSessionAssignment(session);
 
   const handleAssignUpdate = (updated: StudentAssignment | StudentSessionAssignment) => {
     const sessionRecord = updated as StudentSessionAssignment;
@@ -298,7 +303,7 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
   };
 
   const downloadAssignment = (student: Student, record: StudentSessionAssignment) => {
-    const assignment = course.assignments.find((a) => a.id === record.assignmentId);
+    const assignment = course.assignments.find((a) => a.id === record.assignmentId) ?? assignmentForSession;
     const content = `Assignment: ${assignment?.title || record.assignmentId}\nStudent: ${student.name}\nStatus: ${record.status}\nScore: ${record.score ?? "-"}\nFeedback: ${record.feedback ?? "-"}`;
     const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -331,15 +336,38 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
         </div>
       </div>
 
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{course.name}</p>
+            <h3 className="mt-1 text-lg font-extrabold text-foreground leading-tight">{assignmentForSession.title}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{session.date} · {course.students.length} students</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl bg-green-50 px-3 py-2">
+              <p className="text-base font-extrabold text-green-700">{gradedCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-green-700/70">Graded</p>
+            </div>
+            <div className="rounded-xl bg-amber-50 px-3 py-2">
+              <p className="text-base font-extrabold text-amber-700">{submittedCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700/70">Submitted</p>
+            </div>
+            <div className="rounded-xl bg-slate-100 px-3 py-2">
+              <p className="text-base font-extrabold text-slate-600">{issuedCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Issued</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="bg-muted/60 border-b border-border">
                 <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student Name</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Course</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
-                <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Progress</th>
                 <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment File</th>
               </tr>
             </thead>
@@ -347,9 +375,9 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
               {course.students.map((student) => {
                 const rec = sessionAssignments.find((r) => r.studentId === student.id && r.sessionId === session.id);
                 if (!rec) return (
-                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={5} className="px-4 py-3">No assignment record</td></tr>
+                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={4} className="px-4 py-3">No assignment record</td></tr>
                 );
-                const assignment = course.assignments.find((a) => a.id === rec.assignmentId);
+                const assignment = course.assignments.find((a) => a.id === rec.assignmentId) ?? assignmentForSession;
                 const canDownload = rec.status === "graded";
                 return (
                   <tr key={student.id} className="hover:bg-muted/20">
@@ -359,14 +387,26 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
                         <span className="font-semibold text-foreground whitespace-nowrap">{student.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{course.name}</td>
-                    <td className="px-4 py-3">{assignment?.title ?? rec.assignmentId}</td>
-                    <td className="px-4 py-3 text-center"><AssignmentStatusChip status={rec.status} onClick={() => setAssignDetail({ student, assignment: makeSessionAssignment(session), record: rec })} /></td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{assignment.title}</p>
+                        <p className="text-xs text-muted-foreground">Session {session.number}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => setAssignDetail({ student, assignment: makeSessionAssignment(session), record: rec })}
+                        className="rounded-xl px-2 py-1 hover:bg-muted/60"
+                        title={`Open ${rec.status} assignment`}
+                      >
+                        <AssignmentLifecycle status={rec.status} />
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => downloadAssignment(student, rec)}
                         disabled={!canDownload}
-                        className="inline-flex items-center gap-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#25476a]/15 bg-white px-3 py-2 text-sm font-bold text-[#25476a] hover:border-[#38aae1]/40 hover:bg-[#e8f0f7] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Download size={14} />
                         <span>{canDownload ? "Download" : "Locked"}</span>
@@ -404,10 +444,14 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
   const idx = sessions.findIndex((s) => s.id === sessionId);
   const session = sessions[idx];
   const sessionReports = getSessionReportRecords(course);
+  const recordsForSession = sessionReports.filter((record) => record.sessionId === sessionId);
+  const doneCount = recordsForSession.filter((record) => record.done).length;
+  const pendingCount = recordsForSession.filter((record) => !record.done).length;
 
   const [reportDetail, setReportDetail] = useState<{ student: Student; report: Report; record: StudentSessionReport } | null>(null);
 
   if (!session) return <div className="p-6 bg-card border border-border rounded-2xl">Session not found.</div>;
+  const reportForSession = makeSessionReport(session);
 
   const handleReportUpdate = (updated: StudentReport | StudentSessionReport) => {
     const sessionRecord = updated as StudentSessionReport;
@@ -419,7 +463,6 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
   };
 
   const downloadReport = (student: Student, record: StudentSessionReport) => {
-    const report = course.reports.find((r) => r.id === `${session.id}-report`) ?? course.reports[0];
     const content = record.done ? record.content : `${student.name} - Report not available`;
     const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -452,12 +495,33 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
         </div>
       </div>
 
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{course.name}</p>
+            <h3 className="mt-1 text-lg font-extrabold text-foreground leading-tight">{reportForSession.title}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{session.date} · {course.students.length} students</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="rounded-xl bg-green-50 px-4 py-2">
+              <p className="text-base font-extrabold text-green-700">{doneCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-green-700/70">Done</p>
+            </div>
+            <div className="rounded-xl bg-rose-50 px-4 py-2">
+              <p className="text-base font-extrabold text-rose-600">{pendingCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-rose-600/70">Pending</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="bg-muted/60 border-b border-border">
                 <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student Name</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
                 <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Download</th>
               </tr>
@@ -466,7 +530,7 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
               {course.students.map((student) => {
                 const rec = sessionReports.find((r) => r.studentId === student.id && r.sessionId === session.id);
                 if (!rec) return (
-                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={3} className="px-4 py-3">No report record</td></tr>
+                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={4} className="px-4 py-3">No report record</td></tr>
                 );
                 return (
                   <tr key={student.id} className="hover:bg-muted/20">
@@ -476,12 +540,22 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
                         <span className="font-semibold text-foreground whitespace-nowrap">{student.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">{rec.done ? <span className="text-green-600 font-semibold">Done</span> : <span className="text-rose-600 font-semibold">Pending</span>}</td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{reportForSession.title}</p>
+                        <p className="text-xs text-muted-foreground">Session {session.number}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${rec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                        {rec.done ? "Done" : "Pending"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => downloadReport(student, rec)}
                         disabled={!rec.done}
-                        className="inline-flex items-center gap-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#25476a]/15 bg-white px-3 py-2 text-sm font-bold text-[#25476a] hover:border-[#38aae1]/40 hover:bg-[#e8f0f7] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Download size={14} />
                         <span>{rec.done ? "Download" : "Locked"}</span>
@@ -647,6 +721,102 @@ const REPORTS_C6: Report[] = [
   { id: "r15", title: "Final Project Report", date: "2025-05-10", type: "final" },
 ];
 
+const STUDENTS_C7: Student[] = [
+  { id: "s16", name: "Aisha Noor", avatar: "AN" },
+  { id: "s17", name: "Caleb Muriithi", avatar: "CM" },
+  { id: "s18", name: "Diana Atieno", avatar: "DA" },
+  { id: "s19", name: "Eliud Mwenda", avatar: "EM" },
+];
+const ASSIGNMENTS_C7: Assignment[] = [
+  { id: "a20", title: "Wireframe a Mobile Flow", dueDate: "2025-06-06" },
+  { id: "a21", title: "Build Login Screen", dueDate: "2025-06-20" },
+  { id: "a22", title: "Local Storage Exercise", dueDate: "2025-07-04" },
+  { id: "a23", title: "Capstone App Demo", dueDate: "2025-07-18" },
+];
+const REPORTS_C7: Report[] = [
+  { id: "r16", title: "Sprint 1 Progress", date: "2025-06-13", type: "weekly" },
+  { id: "r17", title: "Sprint 2 Progress", date: "2025-07-04", type: "weekly" },
+  { id: "r18", title: "Mobile App Final Report", date: "2025-07-22", type: "final" },
+];
+
+const STUDENTS_C8: Student[] = [
+  { id: "s20", name: "Farah Hassan", avatar: "FH" },
+  { id: "s21", name: "George Mutiso", avatar: "GM" },
+];
+const ASSIGNMENTS_C8: Assignment[] = [
+  { id: "a24", title: "Data Collection Sheet", dueDate: "2025-06-05" },
+  { id: "a25", title: "Charts and Insights", dueDate: "2025-06-19" },
+  { id: "a26", title: "Simple Prediction Model", dueDate: "2025-07-03" },
+];
+const REPORTS_C8: Report[] = [
+  { id: "r19", title: "Data Skills Report", date: "2025-06-27", type: "monthly" },
+  { id: "r20", title: "AI Basics Final Report", date: "2025-07-11", type: "final" },
+];
+
+const STUDENTS_C9: Student[] = [
+  { id: "s22", name: "Hilda Barasa", avatar: "HB" },
+  { id: "s23", name: "Ian Kibet", avatar: "IK" },
+  { id: "s24", name: "Joy Makena", avatar: "JM" },
+];
+const ASSIGNMENTS_C9: Assignment[] = [
+  { id: "a27", title: "Speech Outline", dueDate: "2025-05-30" },
+  { id: "a28", title: "Voice Projection Practice", dueDate: "2025-06-13" },
+  { id: "a29", title: "Recorded Presentation", dueDate: "2025-06-27" },
+];
+const REPORTS_C9: Report[] = [
+  { id: "r21", title: "Confidence Growth Report", date: "2025-06-14", type: "weekly" },
+  { id: "r22", title: "Presentation Final Report", date: "2025-07-01", type: "final" },
+];
+
+const STUDENTS_C10: Student[] = [
+  { id: "s25", name: "Kevin Otieno", avatar: "KO" },
+  { id: "s26", name: "Lilian Wairimu", avatar: "LW" },
+  { id: "s27", name: "Malik Abdalla", avatar: "MA" },
+  { id: "s28", name: "Nadia Cherono", avatar: "NC" },
+  { id: "s29", name: "Oscar Muli", avatar: "OM" },
+];
+const ASSIGNMENTS_C10: Assignment[] = [
+  { id: "a30", title: "Game Concept Pitch", dueDate: "2025-06-02" },
+  { id: "a31", title: "Sprite and Level Design", dueDate: "2025-06-16" },
+  { id: "a32", title: "Playable Prototype", dueDate: "2025-06-30" },
+  { id: "a33", title: "Final Game Showcase", dueDate: "2025-07-14" },
+];
+const REPORTS_C10: Report[] = [
+  { id: "r23", title: "Prototype Review", date: "2025-06-21", type: "weekly" },
+  { id: "r24", title: "Game Design Final Report", date: "2025-07-18", type: "final" },
+];
+
+const STUDENTS_C11: Student[] = [
+  { id: "s30", name: "Patricia Wekesa", avatar: "PW" },
+  { id: "s31", name: "Quincy Ochieng", avatar: "QO" },
+];
+const ASSIGNMENTS_C11: Assignment[] = [
+  { id: "a34", title: "Fractions and Decimals", dueDate: "2025-05-28" },
+  { id: "a35", title: "Algebra Practice Set", dueDate: "2025-06-11" },
+  { id: "a36", title: "Geometry Revision", dueDate: "2025-06-25" },
+  { id: "a37", title: "Mock Exam Review", dueDate: "2025-07-09" },
+];
+const REPORTS_C11: Report[] = [
+  { id: "r25", title: "May Progress Report", date: "2025-05-31", type: "monthly" },
+  { id: "r26", title: "June Progress Report", date: "2025-06-30", type: "monthly" },
+  { id: "r27", title: "Math Mastery Final Report", date: "2025-07-12", type: "final" },
+];
+
+const STUDENTS_C12: Student[] = [
+  { id: "s32", name: "Ruth Nyambura", avatar: "RN" },
+  { id: "s33", name: "Samuel Kiptoo", avatar: "SK" },
+  { id: "s34", name: "Talia Muthoni", avatar: "TM" },
+];
+const ASSIGNMENTS_C12: Assignment[] = [
+  { id: "a38", title: "Password Safety Audit", dueDate: "2025-06-07" },
+  { id: "a39", title: "Phishing Scenario Review", dueDate: "2025-06-21" },
+  { id: "a40", title: "Family Safety Plan", dueDate: "2025-07-05" },
+];
+const REPORTS_C12: Report[] = [
+  { id: "r28", title: "Cyber Safety Check-in", date: "2025-06-24", type: "weekly" },
+  { id: "r29", title: "Cyber Safety Final Report", date: "2025-07-08", type: "final" },
+];
+
 const INITIAL_COURSES: Course[] = [
   {
     id: "c1", name: "Robotics & Automation", icon: <Cpu size={18} />, locationType: "center",
@@ -695,6 +865,54 @@ const INITIAL_COURSES: Course[] = [
     studentAssignments: makeStudentAssignments(STUDENTS_C6, ASSIGNMENTS_C6, 0.75),
     studentReports: makeStudentReports(STUDENTS_C6, REPORTS_C6, 2),
     claimStatus: "full_claimed", advancePaidAmount: 9576,
+  },
+  {
+    id: "c7", name: "Mobile App Development", icon: <Smartphone size={18} />, locationType: "center",
+    locationName: "Riverside Innovation Lab", students: STUDENTS_C7, totalSessions: 10,
+    sessions: makeSessions(10, 1.5, 7), assignments: ASSIGNMENTS_C7, reports: REPORTS_C7,
+    studentAssignments: makeStudentAssignments(STUDENTS_C7, ASSIGNMENTS_C7, 0.55),
+    studentReports: makeStudentReports(STUDENTS_C7, REPORTS_C7, 1),
+    claimStatus: "not_requested", advancePaidAmount: 0,
+  },
+  {
+    id: "c8", name: "AI & Data Basics", icon: <Cpu size={18} />, locationType: "online",
+    locationName: "Online - Google Classroom", students: STUDENTS_C8, totalSessions: 8,
+    sessions: makeSessions(8, 1, 5), assignments: ASSIGNMENTS_C8, reports: REPORTS_C8,
+    studentAssignments: makeStudentAssignments(STUDENTS_C8, ASSIGNMENTS_C8, 0.45),
+    studentReports: makeStudentReports(STUDENTS_C8, REPORTS_C8, 1),
+    claimStatus: "denied", advancePaidAmount: 0,
+  },
+  {
+    id: "c9", name: "Public Speaking", icon: <Video size={18} />, locationType: "home",
+    locationName: "Lavington, Nairobi", students: STUDENTS_C9, totalSessions: 6,
+    sessions: makeSessions(6, 1, 6), assignments: ASSIGNMENTS_C9, reports: REPORTS_C9,
+    studentAssignments: makeStudentAssignments(STUDENTS_C9, ASSIGNMENTS_C9, 1),
+    studentReports: makeStudentReports(STUDENTS_C9, REPORTS_C9, 2),
+    claimStatus: "not_requested", advancePaidAmount: 0,
+  },
+  {
+    id: "c10", name: "Game Design Studio", icon: <Code2 size={18} />, locationType: "physical",
+    locationName: "Two Rivers Youth Hub", students: STUDENTS_C10, totalSessions: 12,
+    sessions: makeSessions(12, 1.5, 9), assignments: ASSIGNMENTS_C10, reports: REPORTS_C10,
+    studentAssignments: makeStudentAssignments(STUDENTS_C10, ASSIGNMENTS_C10, 0.7),
+    studentReports: makeStudentReports(STUDENTS_C10, REPORTS_C10, 1),
+    claimStatus: "advance_claimed", advancePaidAmount: 5424,
+  },
+  {
+    id: "c11", name: "Mathematics Mastery", icon: <BookOpen size={18} />, locationType: "home",
+    locationName: "Runda, Nairobi", students: STUDENTS_C11, totalSessions: 14,
+    sessions: makeSessions(14, 1, 11), assignments: ASSIGNMENTS_C11, reports: REPORTS_C11,
+    studentAssignments: makeStudentAssignments(STUDENTS_C11, ASSIGNMENTS_C11, 0.8),
+    studentReports: makeStudentReports(STUDENTS_C11, REPORTS_C11, 2),
+    claimStatus: "not_requested", advancePaidAmount: 0,
+  },
+  {
+    id: "c12", name: "Cyber Safety", icon: <AlertCircle size={18} />, locationType: "googlemeet",
+    locationName: "Google Meet - Evening Cohort", students: STUDENTS_C12, totalSessions: 8,
+    sessions: makeSessions(8, 0.5, 3), assignments: ASSIGNMENTS_C12, reports: REPORTS_C12,
+    studentAssignments: makeStudentAssignments(STUDENTS_C12, ASSIGNMENTS_C12, 0.35),
+    studentReports: makeStudentReports(STUDENTS_C12, REPORTS_C12, 0),
+    claimStatus: "not_requested", advancePaidAmount: 0,
   },
 ];
 
@@ -836,6 +1054,30 @@ function AssignmentStatusChip({ status, onClick }: { status: AssignmentStatus; o
     >
       {label}
     </button>
+  );
+}
+
+function AssignmentLifecycle({ status }: { status: AssignmentStatus }) {
+  const steps: { key: AssignmentStatus; label: string }[] = [
+    { key: "issued", label: "Issued" },
+    { key: "submitted", label: "Submitted" },
+    { key: "graded", label: "Graded" },
+  ];
+  const currentIndex = steps.findIndex((step) => step.key === status);
+
+  return (
+    <div className="flex items-center justify-center gap-1.5">
+      {steps.map((step, index) => {
+        const complete = index <= currentIndex;
+        return (
+          <div key={step.key} className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${complete ? "bg-[#25476a]" : "bg-slate-200"}`} title={step.label} />
+            <span className={`hidden xl:inline text-[11px] font-semibold ${complete ? "text-[#25476a]" : "text-muted-foreground"}`}>{step.label}</span>
+            {index < steps.length - 1 && <span className={`h-px w-4 ${index < currentIndex ? "bg-[#25476a]" : "bg-slate-200"}`} />}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
