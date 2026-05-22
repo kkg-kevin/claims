@@ -9,7 +9,189 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type LocationType = "center" | "home" | "online" | "physical" | "googlemeet";
+// ─── Student Session View (students as rows, metrics as columns) ──────────────
+
+function StudentSessionView({
+  course, onUpdate,
+}: {
+  course: Course;
+  onUpdate: (updates: Partial<Course>) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const sessions = course.sessions;
+  const session = sessions[index];
+
+  const attendance = getAttendanceRecords(course);
+  const sessionAssignments = getSessionAssignmentRecords(course);
+  const sessionReports = getSessionReportRecords(course);
+
+  const [assignDetail, setAssignDetail] = useState<{
+    student: Student;
+    assignment: Assignment;
+    record: StudentSessionAssignment;
+  } | null>(null);
+
+  const [reportDetail, setReportDetail] = useState<{
+    student: Student;
+    report: Report;
+    record: StudentSessionReport;
+  } | null>(null);
+
+  const toggleAttendance = (studentId: string) => {
+    if (!session) return;
+    const updated = getAttendanceRecords(course).map((r) =>
+      r.studentId === studentId && r.sessionId === session.id ? { ...r, present: !r.present } : r
+    );
+    onUpdate({ attendance: updated });
+  };
+
+  const handleAssignUpdate = (updated: StudentAssignment | StudentSessionAssignment) => {
+    const sessionRecord = updated as StudentSessionAssignment;
+    const newRecords = getSessionAssignmentRecords(course).map((r) =>
+      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+    );
+    onUpdate({ sessionAssignments: newRecords });
+    setAssignDetail(null);
+  };
+
+  const handleReportUpdate = (updated: StudentReport | StudentSessionReport) => {
+    const sessionRecord = updated as StudentSessionReport;
+    const newRecords = getSessionReportRecords(course).map((r) =>
+      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+    );
+    onUpdate({ sessionReports: newRecords });
+    setReportDetail(null);
+  };
+
+  if (!session) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-6 text-center">
+        <p className="text-sm text-muted-foreground">No sessions available for this course.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-foreground">Session {session.number}</h3>
+          <p className="text-xs text-muted-foreground">{session.date}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
+            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
+            <ChevronLeft size={18} />
+          </button>
+          <div className="text-xs text-muted-foreground">{index + 1} / {sessions.length}</div>
+          <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1}
+            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="bg-muted/60 border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[220px]">Student</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Attendance</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Invoice</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {course.students.map((st) => {
+                const att = attendance.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                const aRec = sessionAssignments.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                const rRec = sessionReports.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                const present = att?.present ?? false;
+                return (
+                  <tr key={st.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 sticky left-0 bg-card">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar initials={st.avatar} size="sm" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{st.name}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={present}
+                        onClick={() => toggleAttendance(st.id)}
+                        className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
+                      >
+                        <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
+                      </button>
+                      <p className={`mt-1 text-[10px] font-semibold ${present ? "text-green-600" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
+                    </td>
+
+                    <td className="px-3 py-3 text-center">
+                      {aRec ? (
+                        <AssignmentStatusChip status={aRec.status} onClick={() => setAssignDetail({ student: st, assignment: makeSessionAssignment(session), record: aRec })} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-3 py-3 text-center">
+                      {rRec ? (
+                        <button onClick={() => setReportDetail({ student: st, report: makeSessionReport(session), record: rRec })}
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                          {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
+                          {rRec.done ? "Done" : "Pending"}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-3 py-3 text-center">
+                      {session.attended ? (
+                        <span className="font-bold font-mono">KSh {RATE[course.locationType].toLocaleString()}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {assignDetail && (
+        <AssignmentDetailModal
+          student={assignDetail.student}
+          assignment={assignDetail.assignment}
+          record={assignDetail.record}
+          onClose={() => setAssignDetail(null)}
+          onUpdate={handleAssignUpdate}
+        />
+      )}
+
+      {reportDetail && (
+        <ReportDetailModal
+          student={reportDetail.student}
+          report={reportDetail.report}
+          record={reportDetail.record}
+          onClose={() => setReportDetail(null)}
+          onUpdate={handleReportUpdate}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Invoice View ─────────────────────────────────────────────────────────────
 type SessionDuration = 0.5 | 1 | 1.5;
 type ClaimStatus = "not_requested" | "advance_claimed" | "full_claimed" | "approved" | "denied";
 type AssignmentStatus = "issued" | "submitted" | "graded";
@@ -1087,6 +1269,190 @@ function ReportsView({
   );
 }
 
+    // ─── Session Overview (per-session student rows) ─────────────────────────────
+
+    function SessionOverviewView({
+      course, onUpdate, onBack,
+    }: {
+      course: Course;
+      onUpdate: (updates: Partial<Course>) => void;
+      onBack: () => void;
+    }) {
+      const [index, setIndex] = useState(0);
+      const sessions = course.sessions;
+      const session = sessions[index];
+
+      const attendance = getAttendanceRecords(course);
+      const sessionAssignments = getSessionAssignmentRecords(course);
+      const sessionReports = getSessionReportRecords(course);
+
+      const [assignDetail, setAssignDetail] = useState<{
+        student: Student;
+        assignment: Assignment;
+        record: StudentSessionAssignment;
+      } | null>(null);
+
+      const [reportDetail, setReportDetail] = useState<{
+        student: Student;
+        report: Report;
+        record: StudentSessionReport;
+      } | null>(null);
+
+      const toggleAttendance = (studentId: string) => {
+        const updated = getAttendanceRecords(course).map((r) =>
+          r.studentId === studentId && r.sessionId === session.id ? { ...r, present: !r.present } : r
+        );
+        onUpdate({ attendance: updated });
+      };
+
+      const handleAssignUpdate = (updated: StudentAssignment | StudentSessionAssignment) => {
+        const sessionRecord = updated as StudentSessionAssignment;
+        const newRecords = getSessionAssignmentRecords(course).map((r) =>
+          r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+        );
+        onUpdate({ sessionAssignments: newRecords });
+        setAssignDetail(null);
+      };
+
+      const handleReportUpdate = (updated: StudentReport | StudentSessionReport) => {
+        const sessionRecord = updated as StudentSessionReport;
+        const newRecords = getSessionReportRecords(course).map((r) =>
+          r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+        );
+        onUpdate({ sessionReports: newRecords });
+        setReportDetail(null);
+      };
+
+      if (!session) {
+        return (
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-3">
+              <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+                <ChevronLeft size={20} />
+              </button>
+              <div>
+                <h2 className="font-bold text-foreground">Session Overview</h2>
+                <p className="text-xs text-muted-foreground">No sessions for this course.</p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+              <ChevronLeft size={20} />
+            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+                <ChevronLeft size={18} />
+              </button>
+              <div>
+                <h2 className="font-bold text-foreground">Session {session.number}</h2>
+                <p className="text-xs text-muted-foreground">{session.date}</p>
+              </div>
+              <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-max text-sm">
+                <thead>
+                  <tr className="bg-muted/60 border-b border-border">
+                    <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[170px]">Student</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Attendance</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Invoice</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {course.students.map((student) => {
+                    const att = attendance.find((r) => r.studentId === student.id && r.sessionId === session.id);
+                    const aRec = sessionAssignments.find((r) => r.studentId === student.id && r.sessionId === session.id);
+                    const rRec = sessionReports.find((r) => r.studentId === student.id && r.sessionId === session.id);
+                    const present = att?.present ?? false;
+                    return (
+                      <tr key={student.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 sticky left-0 bg-card">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar initials={student.avatar} size="sm" />
+                            <span className="font-semibold text-foreground text-sm whitespace-nowrap">{student.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={present}
+                            onClick={() => toggleAttendance(student.id)}
+                            className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
+                          >
+                            <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
+                          </button>
+                          <p className={`mt-1 text-[10px] font-semibold ${present ? "text-green-600" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          {aRec ? (
+                            <AssignmentStatusChip status={aRec.status} onClick={() => setAssignDetail({ student, assignment: makeSessionAssignment(session), record: aRec })} />
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          {rRec ? (
+                            <button onClick={() => setReportDetail({ student, report: makeSessionReport(session), record: rRec })}
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                              {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
+                              {rRec.done ? "Done" : "Pending"}
+                            </button>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          {session.attended ? (
+                            <span className="font-bold font-mono">KSh {RATE[course.locationType].toLocaleString()}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {assignDetail && (
+            <AssignmentDetailModal
+              student={assignDetail.student}
+              assignment={assignDetail.assignment}
+              record={assignDetail.record}
+              onClose={() => setAssignDetail(null)}
+              onUpdate={handleAssignUpdate}
+            />
+          )}
+
+          {reportDetail && (
+            <ReportDetailModal
+              student={reportDetail.student}
+              report={reportDetail.report}
+              record={reportDetail.record}
+              onClose={() => setReportDetail(null)}
+              onUpdate={handleReportUpdate}
+            />
+          )}
+        </div>
+      );
+    }
+
 // ─── Grades View ──────────────────────────────────────────────────────────────
 
 function GradesView({ course, onBack }: { course: Course; onBack: () => void }) {
@@ -1151,6 +1517,180 @@ function GradesView({ course, onBack }: { course: Course; onBack: () => void }) 
             </table>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Session Matrix View (students as columns, rows = Attendance/Assignment/Report) ──
+
+function SessionMatrixView({
+  course, onUpdate,
+}: {
+  course: Course;
+  onUpdate: (updates: Partial<Course>) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const sessions = course.sessions;
+  const session = sessions[index];
+
+  const attendance = getAttendanceRecords(course);
+  const sessionAssignments = getSessionAssignmentRecords(course);
+  const sessionReports = getSessionReportRecords(course);
+
+  const [assignDetail, setAssignDetail] = useState<{
+    student: Student;
+    assignment: Assignment;
+    record: StudentSessionAssignment;
+  } | null>(null);
+
+  const [reportDetail, setReportDetail] = useState<{
+    student: Student;
+    report: Report;
+    record: StudentSessionReport;
+  } | null>(null);
+
+  const toggleAttendance = (studentId: string) => {
+    if (!session) return;
+    const updated = getAttendanceRecords(course).map((r) =>
+      r.studentId === studentId && r.sessionId === session.id ? { ...r, present: !r.present } : r
+    );
+    onUpdate({ attendance: updated });
+  };
+
+  const handleAssignUpdate = (updated: StudentAssignment | StudentSessionAssignment) => {
+    const sessionRecord = updated as StudentSessionAssignment;
+    const newRecords = getSessionAssignmentRecords(course).map((r) =>
+      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+    );
+    onUpdate({ sessionAssignments: newRecords });
+    setAssignDetail(null);
+  };
+
+  const handleReportUpdate = (updated: StudentReport | StudentSessionReport) => {
+    const sessionRecord = updated as StudentSessionReport;
+    const newRecords = getSessionReportRecords(course).map((r) =>
+      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+    );
+    onUpdate({ sessionReports: newRecords });
+    setReportDetail(null);
+  };
+
+  if (!session) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-6 text-center">
+        <p className="text-sm text-muted-foreground">No sessions available for this course.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-foreground">Session {session.number}</h3>
+          <p className="text-xs text-muted-foreground">{session.date}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
+            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
+            <ChevronLeft size={18} />
+          </button>
+          <div className="text-xs text-muted-foreground">{index + 1} / {sessions.length}</div>
+          <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1}
+            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-auto">
+        <table className="w-full min-w-max text-sm">
+          <thead>
+            <tr className="bg-muted/60 border-b border-border">
+              <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60">Metric</th>
+              {course.students.map((st) => (
+                <th key={st.id} className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide min-w-[110px]">
+                  <div className="flex items-center gap-2 justify-center">
+                    <Avatar initials={st.avatar} size="sm" />
+                    <span className="text-[12px] font-semibold max-w-[90px] truncate">{st.name}</span>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-border">
+            {/* Attendance row */}
+            <tr className="hover:bg-muted/20 transition-colors">
+              <td className="px-4 py-3 font-semibold text-foreground">Attendance</td>
+              {course.students.map((st) => {
+                const att = attendance.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                const present = att?.present ?? false;
+                return (
+                  <td key={st.id} className="px-3 py-3 text-center">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={present}
+                      onClick={() => toggleAttendance(st.id)}
+                      className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
+                    >
+                      <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
+                    </button>
+                    <p className={`mt-1 text-[10px] font-semibold ${present ? "text-green-600" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
+                  </td>
+                );
+              })}
+            </tr>
+
+            {/* Assignment row */}
+            <tr className="hover:bg-muted/20 transition-colors">
+              <td className="px-4 py-3 font-semibold text-foreground">Assignment</td>
+              {course.students.map((st) => {
+                const aRec = sessionAssignments.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                return (
+                  <td key={st.id} className="px-3 py-3 text-center">
+                    {aRec ? (
+                      <AssignmentStatusChip status={aRec.status} onClick={() => setAssignDetail({ student: st, assignment: makeSessionAssignment(session), record: aRec })} />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+
+            {/* Report row */}
+            <tr className="hover:bg-muted/20 transition-colors">
+              <td className="px-4 py-3 font-semibold text-foreground">Report</td>
+              {course.students.map((st) => {
+                const rRec = sessionReports.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                return (
+                  <td key={st.id} className="px-3 py-3 text-center">
+                    {rRec ? (
+                      <button onClick={() => setReportDetail({ student: st, report: makeSessionReport(session), record: rRec })}
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                        {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
+                        {rRec.done ? "Done" : "Pending"}
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {assignDetail && (
+        <AssignmentDetailModal student={assignDetail.student} assignment={assignDetail.assignment} record={assignDetail.record} onClose={() => setAssignDetail(null)} onUpdate={handleAssignUpdate} />
+      )}
+
+      {reportDetail && (
+        <ReportDetailModal student={reportDetail.student} report={reportDetail.report} record={reportDetail.record} onClose={() => setReportDetail(null)} onUpdate={handleReportUpdate} />
       )}
     </div>
   );
@@ -1401,7 +1941,7 @@ function ModuleTile({ icon, label, badge, badgeColor = "bg-[#25476a]", onClick }
 
 // ─── Course Detail ────────────────────────────────────────────────────────────
 
-type SubView = "attendance" | "assignments" | "grades" | "reports" | "invoice";
+type SubView = "attendance" | "assignments" | "grades" | "reports" | "invoice" | "session";
 
 function CourseDetail({
   course, courses, setCourses, onBack,
@@ -1424,6 +1964,7 @@ function CourseDetail({
 
   if (subView === "attendance") return <AttendanceView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
   if (subView === "assignments") return <AssignmentsView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
+  if (subView === "session") return <SessionOverviewView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
   if (subView === "grades") return <GradesView course={course} onBack={() => setSubView(null)} />;
   if (subView === "reports") return <ReportsView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
   if (subView === "invoice") return <InvoiceView course={course} courses={courses} setCourses={setCourses} onBack={() => setSubView(null)} />;
@@ -1486,55 +2027,9 @@ function CourseDetail({
         </div>
       )}
 
-      {/* Module tiles */}
+      {/* Session view: students as rows, metrics as columns */}
       <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Course Modules</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ModuleTile icon={<CalendarCheck size={22} />} label="Attendance"
-            badge={`${presentMarks}/${attendanceRecords.length} present`}
-            badgeColor="bg-green-500"
-            onClick={() => setSubView("attendance")} />
-          <ModuleTile icon={<ClipboardList size={22} />} label="Assignments"
-            badge={pendingGrade > 0 ? `${pendingGrade} to grade` : "All graded"}
-            badgeColor={pendingGrade > 0 ? "bg-amber-500" : "bg-green-500"}
-            onClick={() => setSubView("assignments")} />
-          <ModuleTile icon={<FileText size={22} />} label="Reports"
-            badge={pendingReports > 0 ? `${pendingReports} pending` : "All done"}
-            badgeColor={pendingReports > 0 ? "bg-rose-500" : "bg-green-500"}
-            onClick={() => setSubView("reports")} />
-          <ModuleTile icon={<Receipt size={22} />} label="Invoice"
-            badge={canClaimFull(course) ? "Claim Full" : canClaimAdvance(course) ? "Claim Advance" : undefined}
-            badgeColor={canClaimFull(course) ? "bg-green-500" : "bg-amber-500"}
-            onClick={() => setSubView("invoice")} />
-        </div>
-      </div>
-
-      {/* Students */}
-      <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Students ({course.students.length})</p>
-        <div className="flex flex-col gap-2">
-          {course.students.map((st) => {
-            const stRecords = course.studentAssignments.filter((r) => r.studentId === st.id);
-            const graded = stRecords.filter((r) => r.status === "graded").length;
-            const total = course.assignments.length;
-            const attended = course.sessions.filter((s) => s.attended).length;
-            return (
-              <div key={st.id} className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3">
-                <Avatar initials={st.avatar} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{st.name}</p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                    <span>{graded}/{total} graded</span>
-                    <span>{attended}/{course.totalSessions} sessions</span>
-                  </div>
-                </div>
-                <div className="w-14 flex-shrink-0">
-                  <ProgressBar pct={total > 0 ? (graded / total) * 100 : 0} color="#16a34a" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <StudentSessionView course={course} onUpdate={updateCourse} />
       </div>
     </div>
   );
