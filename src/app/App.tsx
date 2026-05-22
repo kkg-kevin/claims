@@ -7,195 +7,14 @@ import {
   X, Send, CheckSquare, Square, CalendarCheck,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-// ─── Student Session View (students as rows, metrics as columns) ──────────────
-
-function StudentSessionView({
-  course, onUpdate,
-}: {
-  course: Course;
-  onUpdate: (updates: Partial<Course>) => void;
-}) {
-  const [index, setIndex] = useState(0);
-  const sessions = course.sessions;
-  const session = sessions[index];
-
-  const attendance = getAttendanceRecords(course);
-  const sessionAssignments = getSessionAssignmentRecords(course);
-  const sessionReports = getSessionReportRecords(course);
-
-  const [assignDetail, setAssignDetail] = useState<{
-    student: Student;
-    assignment: Assignment;
-    record: StudentSessionAssignment;
-  } | null>(null);
-
-  const [reportDetail, setReportDetail] = useState<{
-    student: Student;
-    report: Report;
-    record: StudentSessionReport;
-  } | null>(null);
-
-  const toggleAttendance = (studentId: string) => {
-    if (!session) return;
-    const updated = getAttendanceRecords(course).map((r) =>
-      r.studentId === studentId && r.sessionId === session.id ? { ...r, present: !r.present } : r
-    );
-    onUpdate({ attendance: updated });
-  };
-
-  const handleAssignUpdate = (updated: StudentAssignment | StudentSessionAssignment) => {
-    const sessionRecord = updated as StudentSessionAssignment;
-    const newRecords = getSessionAssignmentRecords(course).map((r) =>
-      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
-    );
-    onUpdate({ sessionAssignments: newRecords });
-    setAssignDetail(null);
-  };
-
-  const handleReportUpdate = (updated: StudentReport | StudentSessionReport) => {
-    const sessionRecord = updated as StudentSessionReport;
-    const newRecords = getSessionReportRecords(course).map((r) =>
-      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
-    );
-    onUpdate({ sessionReports: newRecords });
-    setReportDetail(null);
-  };
-
-  if (!session) {
-    return (
-      <div className="bg-card border border-border rounded-2xl p-6 text-center">
-        <p className="text-sm text-muted-foreground">No sessions available for this course.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-bold text-foreground">Session {session.number}</h3>
-          <p className="text-xs text-muted-foreground">{session.date}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
-            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
-            <ChevronLeft size={18} />
-          </button>
-          <div className="text-xs text-muted-foreground">{index + 1} / {sessions.length}</div>
-          <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1}
-            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
-            <thead>
-              <tr className="bg-muted/60 border-b border-border">
-                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[220px]">Student</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Attendance</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Invoice</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {course.students.map((st) => {
-                const att = attendance.find((r) => r.studentId === st.id && r.sessionId === session.id);
-                const aRec = sessionAssignments.find((r) => r.studentId === st.id && r.sessionId === session.id);
-                const rRec = sessionReports.find((r) => r.studentId === st.id && r.sessionId === session.id);
-                const present = att?.present ?? false;
-                return (
-                  <tr key={st.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 sticky left-0 bg-card">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar initials={st.avatar} size="sm" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{st.name}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-3 py-3 text-center">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={present}
-                        onClick={() => toggleAttendance(st.id)}
-                        className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
-                      >
-                        <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
-                      </button>
-                      <p className={`mt-1 text-[10px] font-semibold ${present ? "text-green-600" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
-                    </td>
-
-                    <td className="px-3 py-3 text-center">
-                      {aRec ? (
-                        <AssignmentStatusChip status={aRec.status} onClick={() => setAssignDetail({ student: st, assignment: makeSessionAssignment(session), record: aRec })} />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-
-                    <td className="px-3 py-3 text-center">
-                      {rRec ? (
-                        <button onClick={() => setReportDetail({ student: st, report: makeSessionReport(session), record: rRec })}
-                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
-                          {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
-                          {rRec.done ? "Done" : "Pending"}
-                        </button>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-
-                    <td className="px-3 py-3 text-center">
-                      {session.attended ? (
-                        <span className="font-bold font-mono">KSh {RATE[course.locationType].toLocaleString()}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {assignDetail && (
-        <AssignmentDetailModal
-          student={assignDetail.student}
-          assignment={assignDetail.assignment}
-          record={assignDetail.record}
-          onClose={() => setAssignDetail(null)}
-          onUpdate={handleAssignUpdate}
-        />
-      )}
-
-      {reportDetail && (
-        <ReportDetailModal
-          student={reportDetail.student}
-          report={reportDetail.report}
-          record={reportDetail.record}
-          onClose={() => setReportDetail(null)}
-          onUpdate={handleReportUpdate}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── Invoice View ─────────────────────────────────────────────────────────────
 type SessionDuration = 0.5 | 1 | 1.5;
 type ClaimStatus = "not_requested" | "advance_claimed" | "full_claimed" | "approved" | "denied";
 type AssignmentStatus = "issued" | "submitted" | "graded";
 type ReportPeriod = "weekly" | "monthly" | "final";
+
+type LocationType = "center" | "home" | "online" | "physical" | "googlemeet";
 
 interface Student {
   id: string;
@@ -265,6 +84,12 @@ interface StudentSessionReport {
   content: string;
 }
 
+interface InvoiceDoc {
+  fileName: string;
+  fileUrl: string;
+  uploadedAt?: string;
+}
+
 interface Course {
   id: string;
   name: string;
@@ -283,6 +108,371 @@ interface Course {
   sessionReports?: StudentSessionReport[];
   claimStatus: ClaimStatus;
   advancePaidAmount: number;
+  invoice?: InvoiceDoc;
+}
+
+// ─── Student Session View (students as rows, metrics as columns) ──────────────
+
+function StudentSessionView({
+  course, onUpdate, onOpenSessionAssignment, onOpenSessionReport,
+}: {
+  course: Course;
+  onUpdate: (updates: Partial<Course>) => void;
+  onOpenSessionAssignment?: (sessionId: string) => void;
+  onOpenSessionReport?: (sessionId: string) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const sessions = course.sessions;
+  const session = sessions[index];
+
+  const attendance = getAttendanceRecords(course);
+  const sessionAssignments = getSessionAssignmentRecords(course);
+  const sessionReports = getSessionReportRecords(course);
+
+  // navigation callbacks: parent may open a session-level assignment/report page
+
+  const toggleAttendance = (studentId: string) => {
+    if (!session) return;
+    const updated = getAttendanceRecords(course).map((r) =>
+      r.studentId === studentId && r.sessionId === session.id ? { ...r, present: !r.present } : r
+    );
+    onUpdate({ attendance: updated });
+  };
+
+  // session-level updates are handled in the dedicated session pages
+
+  if (!session) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-6 text-center">
+        <p className="text-sm text-muted-foreground">No sessions available for this course.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-foreground">Session {session.number}</h3>
+          <p className="text-xs text-muted-foreground">{session.date}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
+            title="Previous session"
+            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
+            <ChevronLeft size={18} />
+          </button>
+          <div className="text-xs text-muted-foreground">{index + 1} / {sessions.length}</div>
+          <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1}
+            title="Next session"
+            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="bg-muted/60 border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[220px]">Student</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Attendance</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {course.students.map((st) => {
+                const att = attendance.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                const aRec = sessionAssignments.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                const rRec = sessionReports.find((r) => r.studentId === st.id && r.sessionId === session.id);
+                const present = att?.present ?? false;
+                return (
+                  <tr key={st.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 sticky left-0 bg-card">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar initials={st.avatar} size="sm" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{st.name}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleAttendance(st.id)}
+                        className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
+                        title={present ? "Mark absent" : "Mark present"}
+                      >
+                        <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
+                      </button>
+                      <p className={`mt-1 text-[10px] font-semibold ${present ? "text-green-600" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
+                    </td>
+
+                    <td className="px-3 py-3 text-center">
+                      {aRec ? (
+                        <button onClick={() => onOpenSessionAssignment ? onOpenSessionAssignment(session.id) : undefined} className="mx-auto" title="Open assignment">
+                          <AssignmentStatusChip status={aRec.status} />
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-3 py-3 text-center">
+                      {rRec ? (
+                        <button onClick={() => onOpenSessionReport ? onOpenSessionReport(session.id) : undefined}
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                          {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
+                          {rRec.done ? "Done" : "Pending"}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+
+                    
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* session-level modals removed; navigation opens dedicated pages */}
+    </div>
+  );
+}
+
+// ─── Invoice View ─────────────────────────────────────────────────────────────
+// ─── Session Assignment / Report Views (per-session pages) ─────────────────────
+
+function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSession }: {
+  course: Course;
+  sessionId: string;
+  onUpdate: (updates: Partial<Course>) => void;
+  onBack: () => void;
+  onChangeSession?: (offset: number) => void;
+}) {
+  const sessions = course.sessions;
+  const idx = sessions.findIndex((s) => s.id === sessionId);
+  const session = sessions[idx];
+  const sessionAssignments = getSessionAssignmentRecords(course);
+
+  const [assignDetail, setAssignDetail] = useState<{
+    student: Student;
+    assignment: Assignment;
+    record: StudentSessionAssignment;
+  } | null>(null);
+
+  if (!session) return (
+    <div className="p-6 bg-card border border-border rounded-2xl">Session not found.</div>
+  );
+
+  const handleAssignUpdate = (updated: StudentAssignment | StudentSessionAssignment) => {
+    const sessionRecord = updated as StudentSessionAssignment;
+    const newRecords = getSessionAssignmentRecords(course).map((r) =>
+      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+    );
+    onUpdate({ sessionAssignments: newRecords });
+    setAssignDetail(null);
+  };
+
+  const downloadAssignment = (student: Student, record: StudentSessionAssignment) => {
+    const assignment = course.assignments.find((a) => a.id === record.assignmentId);
+    const content = `Assignment: ${assignment?.title || record.assignmentId}\nStudent: ${student.name}\nStatus: ${record.status}\nScore: ${record.score ?? "-"}\nFeedback: ${record.feedback ?? "-"}`;
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${student.name.replace(/\s+/g, "_")}_${assignment?.title.replace(/\s+/g, "_") || record.assignmentId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+          <ChevronLeft size={20} />
+        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => onChangeSession && onChangeSession(-1)} title="Previous session" disabled={idx <= 0} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+            <ChevronLeft size={18} />
+          </button>
+          <div>
+            <h2 className="font-bold text-foreground">Assignments — Session {session.number}</h2>
+            <p className="text-xs text-muted-foreground">{session.date}</p>
+          </div>
+          <button onClick={() => onChangeSession && onChangeSession(1)} title="Next session" disabled={idx >= sessions.length - 1} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-max text-sm">
+            <thead>
+              <tr className="bg-muted/60 border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
+                <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Download</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {course.students.map((student) => {
+                const rec = sessionAssignments.find((r) => r.studentId === student.id && r.sessionId === session.id);
+                if (!rec) return (
+                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={4} className="px-4 py-3">No assignment record</td></tr>
+                );
+                const assignment = course.assignments.find((a) => a.id === rec.assignmentId);
+                return (
+                  <tr key={student.id} className="hover:bg-muted/20">
+                    <td className="px-4 py-3 sticky left-0 bg-card">
+                      <div className="flex items-center gap-2">
+                        <Avatar initials={student.avatar} size="sm" />
+                        <span className="font-semibold text-foreground whitespace-nowrap">{student.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{assignment?.title ?? rec.assignmentId}</td>
+                    <td className="px-4 py-3 text-center"><AssignmentStatusChip status={rec.status} onClick={() => setAssignDetail({ student, assignment: makeSessionAssignment(session), record: rec })} /></td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => downloadAssignment(student, rec)} className="inline-flex items-center gap-2 text-sm font-medium">
+                        <Download size={14} />
+                        <span>Download</span>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {assignDetail && (
+        <AssignmentDetailModal
+          student={assignDetail.student}
+          assignment={assignDetail.assignment}
+          record={assignDetail.record}
+          onClose={() => setAssignDetail(null)}
+          onUpdate={handleAssignUpdate}
+        />
+      )}
+    </div>
+  );
+}
+
+function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSession }: {
+  course: Course;
+  sessionId: string;
+  onUpdate: (updates: Partial<Course>) => void;
+  onBack: () => void;
+  onChangeSession?: (offset: number) => void;
+}) {
+  const sessions = course.sessions;
+  const idx = sessions.findIndex((s) => s.id === sessionId);
+  const session = sessions[idx];
+  const sessionReports = getSessionReportRecords(course);
+
+  const [reportDetail, setReportDetail] = useState<{ student: Student; report: Report; record: StudentSessionReport } | null>(null);
+
+  if (!session) return <div className="p-6 bg-card border border-border rounded-2xl">Session not found.</div>;
+
+  const handleReportUpdate = (updated: StudentReport | StudentSessionReport) => {
+    const sessionRecord = updated as StudentSessionReport;
+    const newRecords = getSessionReportRecords(course).map((r) =>
+      r.studentId === sessionRecord.studentId && r.sessionId === sessionRecord.sessionId ? sessionRecord : r
+    );
+    onUpdate({ sessionReports: newRecords });
+    setReportDetail(null);
+  };
+
+  const downloadReport = (student: Student, record: StudentSessionReport) => {
+    const report = course.reports.find((r) => r.id === `${session.id}-report`) ?? course.reports[0];
+    const content = record.done ? record.content : `${student.name} - Report not available`;
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${student.name.replace(/\s+/g, "_")}_session_${session.number}_report.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+          <ChevronLeft size={20} />
+        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => onChangeSession && onChangeSession(-1)} title="Previous session" disabled={idx <= 0} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+            <ChevronLeft size={18} />
+          </button>
+          <div>
+            <h2 className="font-bold text-foreground">Reports — Session {session.number}</h2>
+            <p className="text-xs text-muted-foreground">{session.date}</p>
+          </div>
+          <button onClick={() => onChangeSession && onChangeSession(1)} title="Next session" disabled={idx >= sessions.length - 1} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-max text-sm">
+            <thead>
+              <tr className="bg-muted/60 border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Download</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {course.students.map((student) => {
+                const rec = sessionReports.find((r) => r.studentId === student.id && r.sessionId === session.id);
+                if (!rec) return (
+                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={3} className="px-4 py-3">No report record</td></tr>
+                );
+                return (
+                  <tr key={student.id} className="hover:bg-muted/20">
+                    <td className="px-4 py-3 sticky left-0 bg-card">
+                      <div className="flex items-center gap-2">
+                        <Avatar initials={student.avatar} size="sm" />
+                        <span className="font-semibold text-foreground whitespace-nowrap">{student.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{rec.done ? <span className="text-green-600 font-semibold">Done</span> : <span className="text-rose-600 font-semibold">Pending</span>}</td>
+                    <td className="px-4 py-3 text-center">
+                      <button onClick={() => rec.done ? downloadReport(student, rec) : setReportDetail({ student, report: makeSessionReport(session), record: rec })} className="inline-flex items-center gap-2 text-sm font-medium">
+                        <Download size={14} />
+                        <span>{rec.done ? "Download" : "Create / Edit"}</span>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {reportDetail && (
+        <ReportDetailModal student={reportDetail.student} report={reportDetail.report} record={reportDetail.record} onClose={() => setReportDetail(null)} onUpdate={handleReportUpdate} />
+      )}
+    </div>
+  );
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -707,7 +897,7 @@ function AssignmentDetailModal({ student, assignment, record, onClose, onUpdate 
               <p className="text-xs text-muted-foreground">{assignment.title}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+          <button onClick={onClose} title="Close" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
             <X size={18} />
           </button>
         </div>
@@ -841,7 +1031,7 @@ function ReportDetailModal({ student, report, record, onClose, onUpdate }: Repor
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+          <button onClick={onClose} title="Close" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
             <X size={18} />
           </button>
         </div>
@@ -916,7 +1106,7 @@ function AttendanceView({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
           <ChevronLeft size={20} />
         </button>
         <div>
@@ -968,9 +1158,8 @@ function AttendanceView({
                       <td key={session.id} className="px-3 py-3 text-center">
                         <button
                           type="button"
-                          role="switch"
-                          aria-checked={present}
                           onClick={() => toggleAttendance(student.id, session.id)}
+                          title={present ? "Mark absent" : "Mark present"}
                           className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
                         >
                           <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
@@ -1021,7 +1210,7 @@ function AssignmentsView({
     <div className="flex flex-col gap-5">
       {/* Back + title */}
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
           <ChevronLeft size={20} />
         </button>
         <div>
@@ -1174,7 +1363,7 @@ function ReportsView({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
           <ChevronLeft size={20} />
         </button>
         <div>
@@ -1272,11 +1461,13 @@ function ReportsView({
     // ─── Session Overview (per-session student rows) ─────────────────────────────
 
     function SessionOverviewView({
-      course, onUpdate, onBack,
+      course, onUpdate, onBack, onOpenSessionAssignment, onOpenSessionReport,
     }: {
       course: Course;
       onUpdate: (updates: Partial<Course>) => void;
       onBack: () => void;
+      onOpenSessionAssignment?: (sessionId: string) => void;
+      onOpenSessionReport?: (sessionId: string) => void;
     }) {
       const [index, setIndex] = useState(0);
       const sessions = course.sessions;
@@ -1297,6 +1488,8 @@ function ReportsView({
         report: Report;
         record: StudentSessionReport;
       } | null>(null);
+
+      // navigation to session-level pages handled by parent
 
       const toggleAttendance = (studentId: string) => {
         const updated = getAttendanceRecords(course).map((r) =>
@@ -1327,7 +1520,7 @@ function ReportsView({
         return (
           <div className="flex flex-col gap-5">
             <div className="flex items-center gap-3">
-              <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+              <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
                 <ChevronLeft size={20} />
               </button>
               <div>
@@ -1342,18 +1535,18 @@ function ReportsView({
       return (
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+            <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
               <ChevronLeft size={20} />
             </button>
             <div className="flex items-center gap-3">
-              <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+              <button onClick={() => setIndex((i) => Math.max(0, i - 1))} title="Previous session" disabled={index === 0} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
                 <ChevronLeft size={18} />
               </button>
               <div>
                 <h2 className="font-bold text-foreground">Session {session.number}</h2>
                 <p className="text-xs text-muted-foreground">{session.date}</p>
               </div>
-              <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
+              <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} title="Next session" disabled={index === sessions.length - 1} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground">
                 <ChevronRight size={18} />
               </button>
             </div>
@@ -1368,7 +1561,6 @@ function ReportsView({
                     <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Attendance</th>
                     <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
                     <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
-                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Invoice</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -1388,9 +1580,8 @@ function ReportsView({
                         <td className="px-3 py-3 text-center">
                           <button
                             type="button"
-                            role="switch"
-                            aria-checked={present}
                             onClick={() => toggleAttendance(student.id)}
+                            title={present ? "Mark absent" : "Mark present"}
                             className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
                           >
                             <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
@@ -1399,14 +1590,16 @@ function ReportsView({
                         </td>
                         <td className="px-3 py-3 text-center">
                           {aRec ? (
-                            <AssignmentStatusChip status={aRec.status} onClick={() => setAssignDetail({ student, assignment: makeSessionAssignment(session), record: aRec })} />
+                            <button onClick={() => onOpenSessionAssignment ? onOpenSessionAssignment(session.id) : undefined} title="Open assignment">
+                              <AssignmentStatusChip status={aRec.status} />
+                            </button>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="px-3 py-3 text-center">
                           {rRec ? (
-                            <button onClick={() => setReportDetail({ student, report: makeSessionReport(session), record: rRec })}
+                            <button onClick={() => onOpenSessionReport ? onOpenSessionReport(session.id) : undefined}
                               className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
                               {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
                               {rRec.done ? "Done" : "Pending"}
@@ -1415,13 +1608,7 @@ function ReportsView({
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-center">
-                          {session.attended ? (
-                            <span className="font-bold font-mono">KSh {RATE[course.locationType].toLocaleString()}</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
+                    
                       </tr>
                     );
                   })}
@@ -1430,25 +1617,7 @@ function ReportsView({
             </div>
           </div>
 
-          {assignDetail && (
-            <AssignmentDetailModal
-              student={assignDetail.student}
-              assignment={assignDetail.assignment}
-              record={assignDetail.record}
-              onClose={() => setAssignDetail(null)}
-              onUpdate={handleAssignUpdate}
-            />
-          )}
-
-          {reportDetail && (
-            <ReportDetailModal
-              student={reportDetail.student}
-              report={reportDetail.report}
-              record={reportDetail.record}
-              onClose={() => setReportDetail(null)}
-              onUpdate={handleReportUpdate}
-            />
-          )}
+          {/* navigation to session-level pages handled by parent */}
         </div>
       );
     }
@@ -1461,7 +1630,7 @@ function GradesView({ course, onBack }: { course: Course; onBack: () => void }) 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
           <ChevronLeft size={20} />
         </button>
         <div>
@@ -1592,12 +1761,12 @@ function SessionMatrixView({
           <p className="text-xs text-muted-foreground">{session.date}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
+          <button onClick={() => setIndex((i) => Math.max(0, i - 1))} title="Previous session" disabled={index === 0}
             className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
             <ChevronLeft size={18} />
           </button>
           <div className="text-xs text-muted-foreground">{index + 1} / {sessions.length}</div>
-          <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1}
+          <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} title="Next session" disabled={index === sessions.length - 1}
             className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
             <ChevronRight size={18} />
           </button>
@@ -1629,11 +1798,10 @@ function SessionMatrixView({
                 const present = att?.present ?? false;
                 return (
                   <td key={st.id} className="px-3 py-3 text-center">
-                    <button
+                      <button
                       type="button"
-                      role="switch"
-                      aria-checked={present}
                       onClick={() => toggleAttendance(st.id)}
+                      title={present ? "Mark absent" : "Mark present"}
                       className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
                     >
                       <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
@@ -1711,22 +1879,58 @@ function InvoiceView({
   const remainingAfterAdvance = totalEarning - course.advancePaidAmount;
   const [claimType, setClaimType] = useState<"full" | "advance" | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const totalHrs = completedSessions.reduce((s, x) => s + x.duration, 0);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    setSelectedFile(f);
+    setSelectedFileUrl(url);
+    setSelectedFileName(f.name);
+  };
+
+  const removeSelectedFile = () => {
+    if (selectedFileUrl) {
+      try { URL.revokeObjectURL(selectedFileUrl); } catch (e) { /**/ }
+    }
+    setSelectedFile(null);
+    setSelectedFileUrl(null);
+    setSelectedFileName(null);
+  };
+
+  const removeInvoice = () => {
+    if (course.invoice?.fileUrl) {
+      try { URL.revokeObjectURL(course.invoice.fileUrl); } catch (e) { /**/ }
+    }
+    const updated = courses.map((c) => c.id === course.id ? { ...c, invoice: undefined } : c);
+    setCourses(updated);
+  };
 
   const confirmClaim = () => {
     const updated = courses.map((c) => {
       if (c.id !== course.id) return c;
-      if (claimType === "advance") return { ...c, claimStatus: "advance_claimed" as ClaimStatus, advancePaidAmount: advanceAmount };
-      return { ...c, claimStatus: "full_claimed" as ClaimStatus };
+      const base = claimType === "advance" ? { ...c, claimStatus: "advance_claimed" as ClaimStatus, advancePaidAmount: advanceAmount } : { ...c, claimStatus: "full_claimed" as ClaimStatus };
+      if (selectedFile && selectedFileUrl) {
+        return { ...base, invoice: { fileName: selectedFileName ?? selectedFile.name, fileUrl: selectedFileUrl, uploadedAt: new Date().toISOString() } };
+      }
+      return base;
     });
     setCourses(updated);
     setShowConfirm(false);
+    // clear selection after submit
+    setSelectedFile(null);
+    setSelectedFileUrl(null);
+    setSelectedFileName(null);
   };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
           <ChevronLeft size={20} />
         </button>
         <div>
@@ -1872,22 +2076,58 @@ function InvoiceView({
 
       <div className="bg-card border border-border rounded-2xl p-5">
         <h3 className="text-sm font-bold text-foreground mb-4">Request Payment</h3>
+
+        {/* ETIMS upload */}
+        <div className="mb-4">
+          <label htmlFor="etims-upload" className="text-xs font-semibold text-muted-foreground">Upload ETIMS Invoice</label>
+          <div className="mt-2 flex items-center gap-3">
+            <input id="etims-upload" type="file" accept=".pdf,.doc,.docx,.jpg,.png" onChange={handleFileChange} />
+            {selectedFileName ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium truncate max-w-[260px]">{selectedFileName}</span>
+                <button onClick={removeSelectedFile} title="Remove file" className="text-sm text-rose-600 hover:underline">Remove</button>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground">No file attached</span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">Attach the ETIMS document to submit with your payment request. Accepted: PDF, DOC, images.</p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={() => { setClaimType("advance"); setShowConfirm(true); }}
-            disabled={!canClaimAdvance(course)}
+            disabled={!canClaimAdvance(course) || !selectedFile}
             className="rounded-xl bg-[#feb139] px-4 py-3 text-sm font-bold text-[#12253a] transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Request Advance - KSh {advanceAmount.toLocaleString()}
           </button>
           <button
             onClick={() => { setClaimType("full"); setShowConfirm(true); }}
-            disabled={!canClaimFull(course)}
+            disabled={!canClaimFull(course) || !selectedFile}
             className="rounded-xl bg-[#25476a] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Request Full Payment - KSh {remainingAfterAdvance.toLocaleString()}
           </button>
         </div>
+
+        {course.invoice && (
+          <div className="mt-4 bg-muted rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText size={18} />
+              <div>
+                <p className="font-semibold text-sm">{course.invoice.fileName}</p>
+                <p className="text-xs text-muted-foreground">Uploaded: {course.invoice.uploadedAt ? new Date(course.invoice.uploadedAt).toLocaleString() : "-"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <a href={course.invoice.fileUrl} download className="inline-flex items-center gap-2 bg-white rounded-xl px-3 py-2 text-sm font-semibold">
+                <Download size={14} /> Download
+              </a>
+              <button onClick={removeInvoice} className="px-3 py-2 rounded-xl border border-border text-sm">Remove</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showConfirm && (
@@ -1941,7 +2181,7 @@ function ModuleTile({ icon, label, badge, badgeColor = "bg-[#25476a]", onClick }
 
 // ─── Course Detail ────────────────────────────────────────────────────────────
 
-type SubView = "attendance" | "assignments" | "grades" | "reports" | "invoice" | "session";
+type SubView = "attendance" | "assignments" | "grades" | "reports" | "invoice" | "session" | "sessionAssignment" | "sessionReport";
 
 function CourseDetail({
   course, courses, setCourses, onBack,
@@ -1949,6 +2189,7 @@ function CourseDetail({
   course: Course; courses: Course[]; setCourses: (c: Course[]) => void; onBack: () => void;
 }) {
   const [subView, setSubView] = useState<SubView | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(course.sessions?.[0]?.id ?? null);
 
   const updateCourse = (updates: Partial<Course>) => {
     setCourses(courses.map((c) => c.id === course.id ? { ...c, ...updates } : c));
@@ -1962,9 +2203,20 @@ function CourseDetail({
   const pendingReports = sessionReports.filter((r) => !r.done).length;
   const presentMarks = attendanceRecords.filter((r) => r.present).length;
 
+  const openSessionAssignment = (sessionId: string) => { setActiveSessionId(sessionId); setSubView("sessionAssignment"); };
+  const openSessionReport = (sessionId: string) => { setActiveSessionId(sessionId); setSubView("sessionReport"); };
+  const changeActiveSessionByOffset = (offset: number) => {
+    if (!activeSessionId) return;
+    const idx = course.sessions.findIndex((s) => s.id === activeSessionId);
+    const newIdx = Math.max(0, Math.min(course.sessions.length - 1, idx + offset));
+    setActiveSessionId(course.sessions[newIdx].id);
+  };
+
   if (subView === "attendance") return <AttendanceView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
   if (subView === "assignments") return <AssignmentsView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
-  if (subView === "session") return <SessionOverviewView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
+  if (subView === "session") return <SessionOverviewView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} onOpenSessionAssignment={openSessionAssignment} onOpenSessionReport={openSessionReport} />;
+  if (subView === "sessionAssignment" && activeSessionId) return <SessionAssignmentView course={course} sessionId={activeSessionId} onUpdate={updateCourse} onBack={() => setSubView(null)} onChangeSession={changeActiveSessionByOffset} />;
+  if (subView === "sessionReport" && activeSessionId) return <SessionReportView course={course} sessionId={activeSessionId} onUpdate={updateCourse} onBack={() => setSubView(null)} onChangeSession={changeActiveSessionByOffset} />;
   if (subView === "grades") return <GradesView course={course} onBack={() => setSubView(null)} />;
   if (subView === "reports") return <ReportsView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
   if (subView === "invoice") return <InvoiceView course={course} courses={courses} setCourses={setCourses} onBack={() => setSubView(null)} />;
@@ -1973,7 +2225,7 @@ function CourseDetail({
     <div className="flex flex-col gap-5">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0 mt-0.5">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0 mt-0.5">
           <ChevronLeft size={20} />
         </button>
         <div className="flex-1 min-w-0">
@@ -1988,7 +2240,13 @@ function CourseDetail({
                 </div>
               </div>
             </div>
-            <StatusBadge status={course.claimStatus} />
+            <div className="flex items-center gap-2">
+              <StatusBadge status={course.claimStatus} />
+              <button onClick={() => setSubView("invoice")}
+                className="text-xs bg-white/80 text-[#25476a] px-3 py-1 rounded-lg font-semibold hover:bg-white transition-colors">
+                Invoice
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2029,7 +2287,7 @@ function CourseDetail({
 
       {/* Session view: students as rows, metrics as columns */}
       <div>
-        <StudentSessionView course={course} onUpdate={updateCourse} />
+        <StudentSessionView course={course} onUpdate={updateCourse} onOpenSessionAssignment={openSessionAssignment} onOpenSessionReport={openSessionReport} />
       </div>
     </div>
   );
@@ -2143,7 +2401,7 @@ export default function App() {
   ];
 
   return (
-    <div className="h-dvh bg-background flex flex-col overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="h-dvh bg-background flex flex-col overflow-hidden">
       {/* Top bar */}
       <div className="bg-[#25476a] text-white px-4 sm:px-6 py-3.5 flex items-center justify-between z-40 shadow-md flex-shrink-0">
         <div className="flex items-center gap-2.5">
@@ -2156,7 +2414,7 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-1.5 rounded-xl hover:bg-white/10 transition-colors relative">
+          <button title="Notifications" className="p-1.5 rounded-xl hover:bg-white/10 transition-colors relative">
             <Bell size={17} />
             <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#feb139] rounded-full" />
           </button>
