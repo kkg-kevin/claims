@@ -178,8 +178,24 @@ function StudentSessionView({
               <tr className="bg-muted/60 border-b border-border">
                 <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[220px]">Student</th>
                 <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Attendance</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
-                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                  <button
+                    type="button"
+                    onClick={() => onOpenSessionAssignment?.(session.id)}
+                    className="font-bold uppercase tracking-wide text-[#25476a] hover:text-[#38aae1]"
+                  >
+                    Assignment
+                  </button>
+                </th>
+                <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                  <button
+                    type="button"
+                    onClick={() => onOpenSessionReport?.(session.id)}
+                    className="font-bold uppercase tracking-wide text-[#25476a] hover:text-[#38aae1]"
+                  >
+                    Report
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -213,9 +229,9 @@ function StudentSessionView({
 
                     <td className="px-3 py-3 text-center">
                       {aRec ? (
-                        <button onClick={() => onOpenSessionAssignment ? onOpenSessionAssignment(session.id) : undefined} className="mx-auto" title="Open assignment">
+                        <div className="flex justify-center">
                           <AssignmentStatusChip status={aRec.status} />
-                        </button>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -223,11 +239,11 @@ function StudentSessionView({
 
                     <td className="px-3 py-3 text-center">
                       {rRec ? (
-                        <button onClick={() => onOpenSessionReport ? onOpenSessionReport(session.id) : undefined}
-                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
                           {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
                           {rRec.done ? "Done" : "Pending"}
-                        </button>
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -320,19 +336,21 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
           <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="bg-muted/60 border-b border-border">
-                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student Name</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Course</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
                 <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
-                <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Download</th>
+                <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment File</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {course.students.map((student) => {
                 const rec = sessionAssignments.find((r) => r.studentId === student.id && r.sessionId === session.id);
                 if (!rec) return (
-                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={4} className="px-4 py-3">No assignment record</td></tr>
+                  <tr key={student.id} className="hover:bg-muted/20"><td colSpan={5} className="px-4 py-3">No assignment record</td></tr>
                 );
                 const assignment = course.assignments.find((a) => a.id === rec.assignmentId);
+                const canDownload = rec.status === "graded";
                 return (
                   <tr key={student.id} className="hover:bg-muted/20">
                     <td className="px-4 py-3 sticky left-0 bg-card">
@@ -341,12 +359,17 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
                         <span className="font-semibold text-foreground whitespace-nowrap">{student.name}</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 font-medium text-foreground">{course.name}</td>
                     <td className="px-4 py-3">{assignment?.title ?? rec.assignmentId}</td>
                     <td className="px-4 py-3 text-center"><AssignmentStatusChip status={rec.status} onClick={() => setAssignDetail({ student, assignment: makeSessionAssignment(session), record: rec })} /></td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => downloadAssignment(student, rec)} className="inline-flex items-center gap-2 text-sm font-medium">
+                      <button
+                        onClick={() => downloadAssignment(student, rec)}
+                        disabled={!canDownload}
+                        className="inline-flex items-center gap-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                      >
                         <Download size={14} />
-                        <span>Download</span>
+                        <span>{canDownload ? "Download" : "Locked"}</span>
                       </button>
                     </td>
                   </tr>
@@ -434,7 +457,7 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
           <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="bg-muted/60 border-b border-border">
-                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[140px]">Student Name</th>
                 <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</th>
                 <th className="text-center px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Download</th>
               </tr>
@@ -455,9 +478,13 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
                     </td>
                     <td className="px-4 py-3">{rec.done ? <span className="text-green-600 font-semibold">Done</span> : <span className="text-rose-600 font-semibold">Pending</span>}</td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => rec.done ? downloadReport(student, rec) : setReportDetail({ student, report: makeSessionReport(session), record: rec })} className="inline-flex items-center gap-2 text-sm font-medium">
+                      <button
+                        onClick={() => downloadReport(student, rec)}
+                        disabled={!rec.done}
+                        className="inline-flex items-center gap-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                      >
                         <Download size={14} />
-                        <span>{rec.done ? "Download" : "Create / Edit"}</span>
+                        <span>{rec.done ? "Download" : "Locked"}</span>
                       </button>
                     </td>
                   </tr>
@@ -1559,8 +1586,24 @@ function ReportsView({
                   <tr className="bg-muted/60 border-b border-border">
                     <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide sticky left-0 bg-muted/60 min-w-[170px]">Student</th>
                     <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Attendance</th>
-                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Assignment</th>
-                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Report</th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <button
+                        type="button"
+                        onClick={() => onOpenSessionAssignment?.(session.id)}
+                        className="font-bold uppercase tracking-wide text-[#25476a] hover:text-[#38aae1]"
+                      >
+                        Assignment
+                      </button>
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                      <button
+                        type="button"
+                        onClick={() => onOpenSessionReport?.(session.id)}
+                        className="font-bold uppercase tracking-wide text-[#25476a] hover:text-[#38aae1]"
+                      >
+                        Report
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -1590,20 +1633,20 @@ function ReportsView({
                         </td>
                         <td className="px-3 py-3 text-center">
                           {aRec ? (
-                            <button onClick={() => onOpenSessionAssignment ? onOpenSessionAssignment(session.id) : undefined} title="Open assignment">
+                            <div className="flex justify-center">
                               <AssignmentStatusChip status={aRec.status} />
-                            </button>
+                            </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="px-3 py-3 text-center">
                           {rRec ? (
-                            <button onClick={() => onOpenSessionReport ? onOpenSessionReport(session.id) : undefined}
-                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
                               {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
                               {rRec.done ? "Done" : "Pending"}
-                            </button>
+                            </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
@@ -1882,7 +1925,27 @@ function InvoiceView({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [requestAmount, setRequestAmount] = useState("");
+  const [advanceReason, setAdvanceReason] = useState("");
+  const [requestFeedback, setRequestFeedback] = useState<"success" | "error" | null>(null);
   const totalHrs = completedSessions.reduce((s, x) => s + x.duration, 0);
+  const defaultRequestAmount = claimType === "advance" ? advanceAmount : remainingAfterAdvance;
+  const parsedRequestAmount = Number(requestAmount);
+  const requestedAmount = Number.isFinite(parsedRequestAmount) && parsedRequestAmount > 0 ? parsedRequestAmount : defaultRequestAmount;
+  const canSubmitRequest = Boolean(
+    claimType &&
+    selectedFile &&
+    requestedAmount > 0 &&
+    (claimType === "full" || advanceReason.trim())
+  );
+
+  const openRequestForm = (type: "advance" | "full") => {
+    setClaimType(type);
+    setRequestAmount(String(type === "advance" ? advanceAmount : remainingAfterAdvance));
+    setAdvanceReason("");
+    setRequestFeedback(null);
+    removeSelectedFile();
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -1911,9 +1974,13 @@ function InvoiceView({
   };
 
   const confirmClaim = () => {
+    if (!canSubmitRequest) {
+      setRequestFeedback("error");
+      return;
+    }
     const updated = courses.map((c) => {
       if (c.id !== course.id) return c;
-      const base = claimType === "advance" ? { ...c, claimStatus: "advance_claimed" as ClaimStatus, advancePaidAmount: advanceAmount } : { ...c, claimStatus: "full_claimed" as ClaimStatus };
+      const base = claimType === "advance" ? { ...c, claimStatus: "advance_claimed" as ClaimStatus, advancePaidAmount: requestedAmount } : { ...c, claimStatus: "full_claimed" as ClaimStatus };
       if (selectedFile && selectedFileUrl) {
         return { ...base, invoice: { fileName: selectedFileName ?? selectedFile.name, fileUrl: selectedFileUrl, uploadedAt: new Date().toISOString() } };
       }
@@ -1921,6 +1988,7 @@ function InvoiceView({
     });
     setCourses(updated);
     setShowConfirm(false);
+    setRequestFeedback("success");
     // clear selection after submit
     setSelectedFile(null);
     setSelectedFileUrl(null);
@@ -1940,6 +2008,7 @@ function InvoiceView({
       </div>
 
       {/* Invoice header card */}
+      {false && (
       <div className="bg-[#25476a] rounded-2xl p-5 text-white">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -1971,14 +2040,45 @@ function InvoiceView({
         </div>
       </div>
 
+      )}
+
       {/* Session table */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-border bg-muted/40 grid grid-cols-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-wide">Description</th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Session</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-muted-foreground uppercase tracking-wide">Duration</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-muted-foreground uppercase tracking-wide">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {completedSessions.map((sess) => (
+                <tr key={sess.id} className="hover:bg-muted/30">
+                  <td className="px-4 py-3 font-medium text-foreground">{course.name}</td>
+                  <td className="px-4 py-3 text-center font-semibold text-[#38aae1]">Session {sess.number}</td>
+                  <td className="px-4 py-3 text-right font-mono text-muted-foreground">{sess.duration}h</td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">KSh {rate.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-[#25476a]/5">
+                <td colSpan={2} className="px-4 py-3 text-sm font-bold text-muted-foreground">Total</td>
+                <td className="px-4 py-3 text-right font-mono font-bold text-muted-foreground">{totalHrs}h</td>
+                <td className="px-4 py-3 text-right font-mono text-base font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div className="hidden px-4 py-3 border-b border-border bg-muted/40 grid-cols-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">
           <span className="col-span-2">Description</span>
           <span className="text-right">Duration</span>
           <span className="text-right">Amount</span>
         </div>
-        <div className="divide-y divide-border max-h-56 overflow-y-auto">
+        <div className="hidden divide-y divide-border max-h-56 overflow-y-auto">
           {completedSessions.map((sess) => (
             <div key={sess.id} className="px-4 py-2.5 grid grid-cols-4 text-sm">
               <span className="col-span-2 text-foreground font-medium">
@@ -1989,7 +2089,7 @@ function InvoiceView({
             </div>
           ))}
         </div>
-        <div className="px-4 py-3 bg-[#25476a]/5 border-t border-border flex items-center justify-between">
+        <div className="hidden px-4 py-3 bg-[#25476a]/5 border-t border-border items-center justify-between">
           <span className="text-sm font-bold text-muted-foreground">Total · {totalHrs}h</span>
           <span className="font-extrabold font-mono text-[#25476a] text-base">KSh {totalEarning.toLocaleString()}</span>
         </div>
@@ -2004,6 +2104,8 @@ function InvoiceView({
       )}
 
       {/* Claim section */}
+      {false && (
+      <>
       <div className="bg-card border border-border rounded-2xl p-5">
         <h3 className="text-sm font-bold text-foreground mb-4">Payment Claim</h3>
         {course.claimStatus === "approved" && (
@@ -2130,6 +2232,124 @@ function InvoiceView({
         )}
       </div>
 
+      </>
+      )}
+
+      <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-base font-extrabold text-foreground leading-tight">Payment Request</h3>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {completedSessions.length}/{course.totalSessions} sessions complete · {pct}% completion
+            </p>
+          </div>
+          <StatusBadge status={course.claimStatus} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={() => openRequestForm("advance")}
+            disabled={!canClaimAdvance(course)}
+            className="rounded-xl bg-[#feb139] px-4 py-3 text-sm font-bold text-[#12253a] transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Request Advance
+          </button>
+          <button
+            onClick={() => openRequestForm("full")}
+            disabled={!canClaimFull(course)}
+            className="rounded-xl bg-[#25476a] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Request Full Payment
+          </button>
+        </div>
+
+        {claimType && (
+          <div className="border border-[#38aae1]/20 bg-[#f8fbfe] rounded-xl p-4 flex flex-col gap-4 shadow-sm">
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                {claimType === "advance" ? "Advance Request" : "Full Payment Request"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Upload ETIMS document and confirm the amount.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                ETIMS Document
+                <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFileChange} className="text-sm font-normal" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                Amount
+                <input
+                  type="number"
+                  min="1"
+                  value={requestAmount}
+                  onChange={(e) => setRequestAmount(e.target.value)}
+                  className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40"
+                />
+              </label>
+            </div>
+
+            {claimType === "advance" && (
+              <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                Advance Reason
+                <textarea
+                  value={advanceReason}
+                  onChange={(e) => setAdvanceReason(e.target.value)}
+                  rows={3}
+                  className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40"
+                />
+              </label>
+            )}
+
+            {selectedFileName && (
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2">
+                <span className="truncate text-sm font-medium">{selectedFileName}</span>
+                <button onClick={removeSelectedFile} className="text-sm font-semibold text-rose-600">Remove</button>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowConfirm(true)}
+              disabled={!canSubmitRequest}
+              className="self-start rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Submit Request
+            </button>
+          </div>
+        )}
+
+        {requestFeedback === "success" && (
+          <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+            <CheckCircle2 size={16} />
+            Payment request submitted for review.
+          </div>
+        )}
+        {requestFeedback === "error" && (
+          <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+            <AlertCircle size={16} />
+            Add the required document, amount, and reason before submitting.
+          </div>
+        )}
+
+        {course.invoice && (
+          <div className="bg-muted rounded-lg p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <FileText size={18} className="flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate">{course.invoice.fileName}</p>
+                <p className="text-xs text-muted-foreground">Uploaded: {course.invoice.uploadedAt ? new Date(course.invoice.uploadedAt).toLocaleString() : "-"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <a href={course.invoice.fileUrl} download className="inline-flex items-center gap-2 bg-white rounded-xl px-3 py-2 text-sm font-semibold">
+                <Download size={14} /> Download
+              </a>
+              <button onClick={removeInvoice} className="px-3 py-2 rounded-xl border border-border text-sm">Remove</button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {showConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowConfirm(false)}>
           <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
@@ -2138,8 +2358,8 @@ function InvoiceView({
             </h3>
             <p className="text-sm text-muted-foreground mb-5">
               {claimType === "advance"
-                ? `Requesting KSh ${advanceAmount.toLocaleString()} advance for ${course.name}. This will be reviewed by your coordinator.`
-                : `Requesting full payment of KSh ${remainingAfterAdvance.toLocaleString()} for ${course.name}.`}
+                ? `Requesting KSh ${requestedAmount.toLocaleString()} advance for ${course.name}. This will be reviewed by your coordinator.`
+                : `Requesting full payment of KSh ${requestedAmount.toLocaleString()} for ${course.name}.`}
             </p>
             <div className="flex gap-3">
               <button onClick={() => setShowConfirm(false)}
@@ -2252,7 +2472,7 @@ function CourseDetail({
       </div>
 
       {/* Summary strip */}
-      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex items-center gap-4">
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
         <div className="relative flex-shrink-0">
           <ProgressRing pct={pct} size={68} />
           <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">{pct}%</span>
@@ -2313,7 +2533,7 @@ function StatCards({ courses }: { courses: Course[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
       {stats.map((s) => (
-        <div key={s.label} className="bg-card rounded-2xl p-4 shadow-sm border border-border">
+        <div key={s.label} className="bg-card rounded-2xl p-4 shadow-sm border border-border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
           <div className={`${s.light} rounded-xl p-2.5 w-fit mb-3`}>
             <span className={s.txt}>{s.icon}</span>
           </div>
@@ -2332,7 +2552,7 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
   const pct = calcCompletion(course);
   return (
     <button onClick={onClick}
-      className="group w-full text-left bg-card rounded-2xl border border-border shadow-sm hover:shadow-md hover:border-[#38aae1]/40 transition-all duration-200 p-4 flex flex-col gap-3">
+      className="group w-full text-left bg-card rounded-2xl border border-border shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-[#38aae1]/40 transition-all duration-200 p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <div className="bg-[#e8f0f7] text-[#25476a] rounded-xl p-2 flex-shrink-0">{course.icon}</div>
@@ -2403,7 +2623,7 @@ export default function App() {
   return (
     <div className="h-dvh bg-background flex flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="bg-[#25476a] text-white px-4 sm:px-6 py-3.5 flex items-center justify-between z-40 shadow-md flex-shrink-0">
+      <div className="bg-[#25476a] text-white px-4 sm:px-6 py-3.5 flex items-center justify-between z-40 shadow-lg shadow-[#12253a]/15 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#feb139] flex items-center justify-center flex-shrink-0">
             <Award size={14} className="text-[#25476a]" />
@@ -2423,23 +2643,25 @@ export default function App() {
       </div>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto px-3 sm:px-5 lg:px-6 py-4 sm:py-5">
+      <main className="flex-1 overflow-y-auto px-3 sm:px-5 lg:px-6 py-4 sm:py-6">
         {selectedCourse ? (
-          <CourseDetail
-            course={selectedCourse}
-            courses={courses}
-            setCourses={setCourses}
-            onBack={() => setSelectedId(null)}
-          />
+          <div className="mx-auto w-full max-w-[1440px]">
+            <CourseDetail
+              course={selectedCourse}
+              courses={courses}
+              setCourses={setCourses}
+              onBack={() => setSelectedId(null)}
+            />
+          </div>
         ) : (
-          <div className="flex flex-col gap-5">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5">
             {/* Title */}
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">My Claims</h1>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-tight">My Claims</h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Track payments for your teaching sessions</p>
               </div>
-              <button className="flex items-center gap-1.5 bg-[#25476a] text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-[#1a3452] transition-colors flex-shrink-0">
+              <button className="flex items-center gap-1.5 bg-[#25476a] text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-[#1a3452] hover:shadow-lg hover:shadow-[#25476a]/20 transition-all flex-shrink-0">
                 <Plus size={14} /> New Claim
               </button>
             </div>
@@ -2452,7 +2674,7 @@ export default function App() {
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input type="text" placeholder="Search courses..."
                 value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-4 py-2.5 text-sm rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40 text-foreground placeholder:text-muted-foreground" />
+                className="w-full pl-8 pr-4 py-2.5 text-sm rounded-xl border border-border bg-card shadow-sm focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40 text-foreground placeholder:text-muted-foreground" />
             </div>
 
             {/* Location filter pills */}
