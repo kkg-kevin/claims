@@ -701,19 +701,20 @@ const INITIAL_COURSES: Course[] = [
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 function calcCompletion(course: Course): number {
-  const studentCount = course.students.length;
-  if (studentCount === 0) return 0;
+  const totalStudentSessions = course.students.length * course.sessions.length;
+  if (totalStudentSessions === 0) return 0;
 
-  const totalSA = course.assignments.length * studentCount;
-  const gradedSA = course.studentAssignments.filter((sa) => sa.status === "graded").length;
-  const assignPct = totalSA > 0 ? gradedSA / totalSA : 1;
+  const attendanceRecords = getAttendanceRecords(course);
+  const presentCount = attendanceRecords.filter((record) => record.present).length;
+  const attendPct = attendanceRecords.length > 0 ? presentCount / attendanceRecords.length : 0;
 
-  const attendedSessions = course.sessions.filter((s) => s.attended).length;
-  const attendPct = course.totalSessions > 0 ? attendedSessions / course.totalSessions : 0;
+  const assignmentRecords = getSessionAssignmentRecords(course);
+  const gradedAssignments = assignmentRecords.filter((record) => record.status === "graded").length;
+  const assignPct = assignmentRecords.length > 0 ? gradedAssignments / assignmentRecords.length : 0;
 
-  const totalSR = course.reports.length * studentCount;
-  const doneSR = course.studentReports.filter((sr) => sr.done).length;
-  const reportPct = totalSR > 0 ? doneSR / totalSR : 1;
+  const reportRecords = getSessionReportRecords(course);
+  const doneReports = reportRecords.filter((record) => record.done).length;
+  const reportPct = reportRecords.length > 0 ? doneReports / reportRecords.length : 0;
 
   return Math.round(((assignPct + attendPct + reportPct) / 3) * 100);
 }
@@ -2477,11 +2478,10 @@ function CourseDetail({
           <ProgressRing pct={pct} size={68} />
           <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">{pct}%</span>
         </div>
-        <div className="flex-1 grid grid-cols-3 gap-3">
+        <div className="flex-1 grid grid-cols-2 gap-3">
           {[
             { label: "Students", val: course.students.length },
             { label: "Sessions", val: `${course.sessions.filter((s) => s.attended).length}/${course.totalSessions}` },
-            { label: "Earnings", val: `KSh ${calcTotalEarning(course).toLocaleString()}` },
           ].map((item) => (
             <div key={item.label} className="flex flex-col gap-0.5">
               <p className="text-xs text-muted-foreground">{item.label}</p>
@@ -2498,7 +2498,7 @@ function CourseDetail({
           <p className="text-sm text-green-700 font-medium">Course complete — claim full payment from Invoice.</p>
         </div>
       )}
-      {pct >= 50 && pct < 100 && course.claimStatus === "not_requested" && (
+      {false && pct >= 50 && pct < 100 && course.claimStatus === "not_requested" && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
           <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
           <p className="text-sm text-amber-700 font-medium">50% milestone — eligible for advance payment.</p>
@@ -2593,8 +2593,6 @@ export default function App() {
   const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
-  const [locationFilter, setLocationFilter] = useState<LocationType | "all">("all");
-  const [searchQuery, setSearchQuery] = useState("");
 
   const selectedCourse = selectedId ? courses.find((c) => c.id === selectedId) ?? null : null;
 
@@ -2603,8 +2601,6 @@ export default function App() {
     if (filterTab === "advance_claimed" && c.claimStatus !== "advance_claimed") return false;
     if (filterTab === "approved" && c.claimStatus !== "approved") return false;
     if (filterTab === "denied" && c.claimStatus !== "denied") return false;
-    if (locationFilter !== "all" && c.locationType !== locationFilter) return false;
-    if (searchQuery && !c.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
@@ -2618,26 +2614,6 @@ export default function App() {
 
   return (
     <div className="h-dvh bg-background flex flex-col overflow-hidden">
-      {/* Top bar */}
-      <div className="bg-[#25476a] text-white px-4 sm:px-6 py-3.5 flex items-center justify-between z-40 shadow-lg shadow-[#12253a]/15 border-b border-white/10 flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#feb139] flex items-center justify-center flex-shrink-0">
-            <Award size={14} className="text-[#25476a]" />
-          </div>
-          <div className="leading-tight">
-            <p className="font-bold text-sm">Digifunzi</p>
-            <p className="text-[10px] opacity-50">Mentor Portal</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button title="Notifications" className="p-1.5 rounded-xl hover:bg-white/10 transition-colors relative">
-            <Bell size={17} />
-            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#feb139] rounded-full" />
-          </button>
-          <div className="w-7 h-7 rounded-full bg-[#38aae1] flex items-center justify-center text-xs font-bold">KK</div>
-        </div>
-      </div>
-
       {/* Content */}
       <main className="flex-1 overflow-y-auto px-3 sm:px-5 lg:px-6 py-4 sm:py-6">
         {selectedCourse ? (
@@ -2657,32 +2633,10 @@ export default function App() {
                 <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-tight">My Claims</h1>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Track payments for your teaching sessions</p>
               </div>
-              <button className="flex items-center gap-1.5 bg-[#25476a] text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-[#1a3452] hover:shadow-lg hover:shadow-[#25476a]/20 transition-all flex-shrink-0">
-                <Plus size={14} /> New Claim
-              </button>
             </div>
 
             {/* Stats */}
             <StatCards courses={courses} />
-
-            {/* Search */}
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input type="text" placeholder="Search courses..."
-                value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-4 py-2.5 text-sm rounded-xl border border-border bg-card shadow-sm focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40 text-foreground placeholder:text-muted-foreground" />
-            </div>
-
-            {/* Location filter pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <Filter size={13} className="text-muted-foreground flex-shrink-0" />
-              {(["all", "center", "home", "online", "physical", "googlemeet"] as const).map((loc) => (
-                <button key={loc} onClick={() => setLocationFilter(loc)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${locationFilter === loc ? "bg-[#25476a] text-white" : "bg-card border border-border text-muted-foreground hover:border-[#38aae1]/40"}`}>
-                  {loc === "all" ? "All" : LOCATION_LABELS[loc]}
-                </button>
-              ))}
-            </div>
 
             {/* Status tabs */}
             <div className="flex items-center gap-0 border-b border-border overflow-x-auto scrollbar-hide">
