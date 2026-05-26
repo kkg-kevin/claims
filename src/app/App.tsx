@@ -90,6 +90,19 @@ interface InvoiceDoc {
   uploadedAt?: string;
 }
 
+type PaymentActivityType = "advance" | "full";
+type PaymentActivityStatus = "requested" | "paid" | "approved" | "denied";
+
+interface PaymentActivity {
+  id: string;
+  type: PaymentActivityType;
+  amount: number;
+  status: PaymentActivityStatus;
+  requestedAt: string;
+  note?: string;
+  invoiceFileName?: string;
+}
+
 interface Course {
   id: string;
   name: string;
@@ -109,6 +122,7 @@ interface Course {
   claimStatus: ClaimStatus;
   advancePaidAmount: number;
   invoice?: InvoiceDoc;
+  paymentActivities?: PaymentActivity[];
 }
 
 // ─── Student Session View (students as rows, metrics as columns) ──────────────
@@ -131,6 +145,12 @@ function StudentSessionView({
 
   // navigation callbacks: parent may open a session-level assignment/report page
 
+  const updateSession = (sessionId: string, updates: Partial<Session>) => {
+    onUpdate({
+      sessions: sessions.map((item) => item.id === sessionId ? { ...item, ...updates } : item),
+    });
+  };
+
   const toggleAttendance = (studentId: string) => {
     if (!session) return;
     const updated = getAttendanceRecords(course).map((r) =>
@@ -145,6 +165,92 @@ function StudentSessionView({
     return (
       <div className="bg-card border border-border rounded-2xl p-6 text-center">
         <p className="text-sm text-muted-foreground">No sessions available for this course.</p>
+      </div>
+    );
+  }
+
+  if (course.locationType === "googlemeet") {
+    const formatDuration = (duration: SessionDuration) => {
+      if (duration === 0.5) return "30 min";
+      if (duration === 1) return "1 hr";
+      return "1.5 hrs";
+    };
+    const formatSchedule = (value: string) => {
+      const date = new Date(value.includes("T") ? value : `${value}T09:00`);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+    const completedCount = sessions.filter((item) => item.attended).length;
+
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-bold text-foreground">Google Meet Sessions</h3>
+            <p className="text-xs text-muted-foreground">{completedCount}/{sessions.length} completed</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5">
+              <span className="text-[11px] font-semibold text-muted-foreground">Scheduled</span>
+              <span className="text-sm font-extrabold text-[#25476a]">{sessions.length}</span>
+            </div>
+            <div className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5">
+              <span className="text-[11px] font-semibold text-muted-foreground">Completed</span>
+              <span className="text-sm font-extrabold text-green-700">{completedCount}</span>
+            </div>
+            <div className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5">
+              <span className="text-[11px] font-semibold text-muted-foreground">Cancelled</span>
+              <span className="text-sm font-extrabold text-rose-700">{sessions.length - completedCount}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[680px]">
+              <thead>
+                <tr className="bg-muted/60 border-b border-border">
+                  <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Session</th>
+                  <th className="text-left px-3 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Scheduled</th>
+                  <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Status</th>
+                  <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Duration</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sessions.map((item) => (
+                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold text-foreground">Session {item.number}</p>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="text-sm font-semibold text-foreground">{formatSchedule(item.date)}</span>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => updateSession(item.id, { attended: !item.attended })}
+                        className={`inline-flex min-w-[108px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${item.attended ? "border-green-200 bg-green-50 text-green-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}
+                      >
+                        {item.attended ? "Completed" : "Cancelled"}
+                      </button>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className="inline-flex min-w-[72px] justify-center rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs font-bold text-foreground">
+                        {formatDuration(item.duration)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   }
@@ -986,6 +1092,39 @@ function canClaimAdvance(course: Course): boolean {
   return pct >= 50 && pct < 100 && course.claimStatus === "not_requested";
 }
 
+function getPaymentActivities(course: Course): PaymentActivity[] {
+  if (course.paymentActivities?.length) {
+    return [...course.paymentActivities].sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+  }
+
+  const activities: PaymentActivity[] = [];
+  if (course.advancePaidAmount > 0) {
+    activities.push({
+      id: `${course.id}-advance-paid`,
+      type: "advance",
+      amount: course.advancePaidAmount,
+      status: course.claimStatus === "denied" ? "denied" : "paid",
+      requestedAt: course.invoice?.uploadedAt ?? new Date().toISOString(),
+      note: "Advance payment",
+      invoiceFileName: course.invoice?.fileName,
+    });
+  }
+
+  if (course.claimStatus === "full_claimed" || course.claimStatus === "approved" || course.claimStatus === "denied") {
+    activities.push({
+      id: `${course.id}-full-${course.claimStatus}`,
+      type: "full",
+      amount: Math.max(calcTotalEarning(course) - course.advancePaidAmount, 0),
+      status: course.claimStatus === "approved" ? "approved" : course.claimStatus === "denied" ? "denied" : "requested",
+      requestedAt: course.invoice?.uploadedAt ?? new Date().toISOString(),
+      note: course.advancePaidAmount > 0 ? "Remaining course payment" : "Full course payment",
+      invoiceFileName: course.invoice?.fileName,
+    });
+  }
+
+  return activities;
+}
+
 // ─── Small UI Components ──────────────────────────────────────────────────────
 
 function getAttendanceRecords(course: Course): StudentSessionAttendance[] {
@@ -1056,16 +1195,8 @@ function makeSessionReport(session: Session): Report {
   };
 }
 
-function StatusBadge({ status }: { status: ClaimStatus }) {
-  const map: Record<ClaimStatus, { label: string; cls: string }> = {
-    not_requested: { label: "Not Requested", cls: "bg-gray-100 text-gray-500" },
-    advance_claimed: { label: "Advance Claimed", cls: "bg-amber-100 text-amber-700" },
-    full_claimed: { label: "Full Claimed", cls: "bg-blue-100 text-blue-700" },
-    approved: { label: "Approved", cls: "bg-green-100 text-green-700" },
-    denied: { label: "Denied", cls: "bg-red-100 text-red-700" },
-  };
-  const { label, cls } = map[status];
-  return <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${cls}`}>{label}</span>;
+function StatusBadge({ status: _status }: { status: ClaimStatus }) {
+  return null;
 }
 
 function AssignmentStatusChip({ status, onClick }: { status: AssignmentStatus; onClick?: () => void }) {
@@ -2289,14 +2420,6 @@ function InvoiceView({
             <p className="text-xs text-muted-foreground truncate">{course.name}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={openRequestDialog}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452]"
-        >
-          <Receipt size={16} />
-          Request Payment
-        </button>
       </div>
 
       {/* Invoice header card */}
@@ -2846,6 +2969,254 @@ function InvoiceView({
 
 // ─── Module Tile ──────────────────────────────────────────────────────────────
 
+function PaymentRequestView({
+  course, courses, setCourses, onBack,
+}: {
+  course: Course; courses: Course[]; setCourses: (c: Course[]) => void; onBack: () => void;
+}) {
+  const pct = calcCompletion(course);
+  const completedSessions = course.sessions.filter((s) => s.attended);
+  const totalEarning = calcTotalEarning(course);
+  const advanceAmount = calcAdvanceAmount(course);
+  const remainingAfterAdvance = Math.max(totalEarning - course.advancePaidAmount, 0);
+  const activities = getPaymentActivities(course);
+  const [claimType, setClaimType] = useState<PaymentActivityType | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [requestAmount, setRequestAmount] = useState("");
+  const [advanceReason, setAdvanceReason] = useState("");
+  const [requestFeedback, setRequestFeedback] = useState<"success" | "error" | null>(null);
+
+  const defaultRequestAmount = claimType === "advance" ? advanceAmount : remainingAfterAdvance;
+  const parsedRequestAmount = Number(requestAmount);
+  const requestedAmount = Number.isFinite(parsedRequestAmount) && parsedRequestAmount > 0 ? parsedRequestAmount : defaultRequestAmount;
+  const canSubmitRequest = Boolean(claimType && selectedFile && requestedAmount > 0 && (claimType === "full" || advanceReason.trim()));
+
+  const removeSelectedFile = () => {
+    if (selectedFileUrl) {
+      try { URL.revokeObjectURL(selectedFileUrl); } catch (e) { /**/ }
+    }
+    setSelectedFile(null);
+    setSelectedFileUrl(null);
+    setSelectedFileName(null);
+  };
+
+  const openRequestForm = (type: PaymentActivityType) => {
+    setClaimType(type);
+    setRequestAmount(String(type === "advance" ? advanceAmount : remainingAfterAdvance));
+    setAdvanceReason("");
+    setRequestFeedback(null);
+    removeSelectedFile();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (selectedFileUrl) {
+      try { URL.revokeObjectURL(selectedFileUrl); } catch (e) { /**/ }
+    }
+    const url = URL.createObjectURL(f);
+    setSelectedFile(f);
+    setSelectedFileUrl(url);
+    setSelectedFileName(f.name);
+  };
+
+  const confirmClaim = () => {
+    if (!canSubmitRequest || !claimType) {
+      setRequestFeedback("error");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const updated = courses.map((c) => {
+      if (c.id !== course.id) return c;
+      const existingActivities = c.paymentActivities ?? getPaymentActivities(c);
+      const activity: PaymentActivity = {
+        id: `${c.id}-${claimType}-${now}`,
+        type: claimType,
+        amount: requestedAmount,
+        status: claimType === "advance" ? "paid" : "requested",
+        requestedAt: now,
+        note: claimType === "advance" ? advanceReason.trim() : "Remaining course payment",
+        invoiceFileName: selectedFileName ?? selectedFile?.name,
+      };
+      const base = claimType === "advance"
+        ? { ...c, claimStatus: "advance_claimed" as ClaimStatus, advancePaidAmount: requestedAmount }
+        : { ...c, claimStatus: "full_claimed" as ClaimStatus };
+      return {
+        ...base,
+        paymentActivities: [...existingActivities, activity],
+        invoice: selectedFile && selectedFileUrl
+          ? { fileName: selectedFileName ?? selectedFile.name, fileUrl: selectedFileUrl, uploadedAt: now }
+          : c.invoice,
+      };
+    });
+
+    setCourses(updated);
+    setShowConfirm(false);
+    setClaimType(null);
+    setRequestFeedback("success");
+    setSelectedFile(null);
+    setSelectedFileUrl(null);
+    setSelectedFileName(null);
+  };
+
+  const statusClass: Record<PaymentActivityStatus, string> = {
+    requested: "bg-blue-50 text-blue-700 border-blue-200",
+    paid: "bg-green-50 text-green-700 border-green-200",
+    approved: "bg-green-50 text-green-700 border-green-200",
+    denied: "bg-red-50 text-red-700 border-red-200",
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+          <ChevronLeft size={20} />
+        </button>
+        <div className="min-w-0">
+          <h2 className="font-bold text-foreground">Request Payment</h2>
+          <p className="text-xs text-muted-foreground truncate">{course.name}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+        <div className="rounded-xl border border-[#38aae1]/20 bg-cyan-50 p-4">
+          <div className="mb-5">
+            <p className="text-sm font-extrabold text-foreground">{completedSessions.length}/{course.totalSessions} Sessions</p>
+            <p className="text-xs text-muted-foreground">{pct}% complete</p>
+          </div>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Estimated Earnings</span>
+              <span className="font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Advance Paid</span>
+              <span className="font-extrabold text-[#25476a]">KSh {course.advancePaidAmount.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Remaining</span>
+              <span className="font-extrabold text-[#25476a]">KSh {remainingAfterAdvance.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="mt-6 grid gap-2">
+            <button onClick={() => openRequestForm("advance")} disabled={!canClaimAdvance(course)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40">
+              <Receipt size={14} />
+              Request advance
+            </button>
+            <button onClick={() => openRequestForm("full")} disabled={!canClaimFull(course)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40">
+              <Receipt size={14} />
+              Request Payment
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-white p-4">
+          <h4 className="text-sm font-extrabold text-foreground">Activities</h4>
+          <div className="mt-4 flex flex-col gap-3">
+            {activities.length === 0 ? (
+              <div className="rounded-lg border border-border px-4 py-6 text-center text-sm text-muted-foreground">No payment history yet.</div>
+            ) : (
+              activities.map((activity) => (
+                <div key={activity.id} className="rounded-lg border border-border bg-muted/30 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{activity.type === "advance" ? "Advance payment" : "Remaining course payment"}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {new Date(activity.requestedAt).toLocaleString()}
+                        {activity.invoiceFileName ? ` · ${activity.invoiceFileName}` : ""}
+                      </p>
+                      {activity.note && <p className="mt-2 text-xs text-muted-foreground">{activity.note}</p>}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-sm font-extrabold text-[#25476a]">KSh {activity.amount.toLocaleString()}</p>
+                      <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold capitalize ${statusClass[activity.status]}`}>{activity.status}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {claimType && (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h3 className="font-extrabold text-foreground">{claimType === "advance" ? "Advance request" : "Full payment request"}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Provide the required details and upload the invoice document.</p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+              <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                {claimType === "advance" ? "Advance amount" : "Payment amount"}
+                <input type="number" min="1" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)}
+                  className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
+              </label>
+              {claimType === "advance" && (
+                <label className="mt-4 flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                  Advance reason
+                  <input value={advanceReason} onChange={(e) => setAdvanceReason(e.target.value)} placeholder="Advance reason"
+                    className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
+                </label>
+              )}
+            </div>
+            <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#38aae1]/50 bg-white p-5 text-center transition-colors hover:bg-[#f8fbfe]">
+              <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFileChange} className="sr-only" />
+              <Download size={28} className="text-[#38aae1]" />
+              <span className="mt-3 text-sm font-semibold text-foreground">Click or drag file to this area to upload</span>
+              <span className="mt-1 text-xs text-muted-foreground">Accepted: PDF, DOC, images.</span>
+              {selectedFileName && <span className="mt-3 max-w-full truncate rounded-lg bg-muted px-3 py-1 text-xs font-semibold text-foreground">{selectedFileName}</span>}
+            </label>
+          </div>
+
+          {requestFeedback === "error" && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              <AlertCircle size={16} />
+              Add the required document, amount, and reason before submitting.
+            </div>
+          )}
+
+          <div className="mt-5 flex justify-end gap-3">
+            <button onClick={() => setClaimType(null)} className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">Cancel</button>
+            <button onClick={() => setShowConfirm(true)} disabled={!canSubmitRequest}
+              className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40">
+              {claimType === "advance" ? "Request advance" : "Request payment"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {requestFeedback === "success" && (
+        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+          <CheckCircle2 size={16} />
+          Payment request added to this course history.
+        </div>
+      )}
+
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowConfirm(false)}>
+          <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-foreground text-base mb-2">Confirm {claimType === "advance" ? "Advance" : "Full"} Payment Claim</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              {claimType === "advance"
+                ? `Requesting KSh ${requestedAmount.toLocaleString()} advance for ${course.name}.`
+                : `Requesting remaining payment of KSh ${requestedAmount.toLocaleString()} for ${course.name}.`}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm">Cancel</button>
+              <button onClick={confirmClaim} className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold hover:bg-[#1a3452] transition-colors text-sm">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModuleTile({ icon, label, badge, badgeColor = "bg-[#25476a]", onClick }: {
   icon: React.ReactNode; label: string; badge?: string; badgeColor?: string; onClick: () => void;
 }) {
@@ -2867,7 +3238,7 @@ function ModuleTile({ icon, label, badge, badgeColor = "bg-[#25476a]", onClick }
 
 // ─── Course Detail ────────────────────────────────────────────────────────────
 
-type SubView = "attendance" | "assignments" | "grades" | "reports" | "invoice" | "session" | "sessionAssignment" | "sessionReport";
+type SubView = "attendance" | "assignments" | "grades" | "reports" | "invoice" | "payment" | "session" | "sessionAssignment" | "sessionReport";
 
 function CourseDetail({
   course, courses, setCourses, onBack,
@@ -2884,7 +3255,6 @@ function CourseDetail({
   const pct = calcCompletion(course);
   const amountPayable = calcTotalEarning(course);
   const advancePayable = calcAdvanceAmount(course);
-  const rate = RATE[course.locationType];
   const requestedAmount = course.claimStatus === "advance_claimed"
     ? course.advancePaidAmount
     : ["full_claimed", "approved"].includes(course.claimStatus)
@@ -2916,6 +3286,7 @@ function CourseDetail({
   if (subView === "grades") return <GradesView course={course} onBack={() => setSubView(null)} />;
   if (subView === "reports") return <ReportsView course={course} onUpdate={updateCourse} onBack={() => setSubView(null)} />;
   if (subView === "invoice") return <InvoiceView course={course} courses={courses} setCourses={setCourses} onBack={() => setSubView(null)} />;
+  if (subView === "payment") return <PaymentRequestView course={course} courses={courses} setCourses={setCourses} onBack={() => setSubView(null)} />;
 
   return (
     <div className="flex flex-col gap-5">
@@ -2942,6 +3313,11 @@ function CourseDetail({
                 className="text-xs bg-white/80 text-[#25476a] px-3 py-1 rounded-lg font-semibold hover:bg-white transition-colors">
                 Invoice
               </button>
+              <button onClick={() => setSubView("payment")}
+                className="inline-flex items-center gap-1.5 text-xs bg-[#25476a] text-white px-3 py-1 rounded-lg font-semibold hover:bg-[#1a3452] transition-colors">
+                <Receipt size={13} />
+                Request Payment
+              </button>
             </div>
           </div>
         </div>
@@ -2957,17 +3333,13 @@ function CourseDetail({
             </div>
             <div className="grid grid-cols-1 gap-2">
               <div>
-                <p className="text-xs text-muted-foreground">Course Progress</p>
-                <p className="font-bold text-foreground text-sm">{pct}% complete</p>
-              </div>
-              <div>
                 <p className="text-xs text-muted-foreground">Students</p>
                 <p className="font-bold text-foreground text-sm">{course.students.length}</p>
               </div>
             </div>
           </div>
 
-          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-border bg-[#f8fbfe] px-4 py-3">
               <p className="text-xs text-muted-foreground">Amount Payable</p>
               <p className="mt-1 text-lg font-extrabold text-[#25476a] leading-tight">KSh {amountPayable.toLocaleString()}</p>
@@ -2975,7 +3347,6 @@ function CourseDetail({
                 <span className="text-[11px] font-semibold text-muted-foreground">Advance Payable</span>
                 <span className="text-sm font-extrabold text-amber-700">KSh {advancePayable.toLocaleString()}</span>
               </div>
-              <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Rate KSh {rate.toLocaleString()} · Advance 30%</p>
             </div>
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
               <p className="text-xs text-amber-700/80">{requestedLabel}</p>
@@ -2983,12 +3354,6 @@ function CourseDetail({
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-amber-200 pt-2">
                 <span className="text-[11px] font-semibold text-amber-700/70">Balance</span>
                 <span className="text-sm font-extrabold text-amber-800">KSh {balanceAmount.toLocaleString()}</span>
-              </div>
-            </div>
-            <div className="rounded-xl border border-border bg-white px-4 py-3">
-              <p className="text-xs text-muted-foreground">Requested</p>
-              <div className="mt-2">
-                <StatusBadge status={course.claimStatus} />
               </div>
             </div>
           </div>
@@ -3000,7 +3365,7 @@ function CourseDetail({
       {pct >= 100 && course.claimStatus === "not_requested" && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
           <CheckCircle2 size={16} className="text-green-600 flex-shrink-0" />
-          <p className="text-sm text-green-700 font-medium">Course complete — claim full payment from Invoice.</p>
+          <p className="text-sm text-green-700 font-medium">Course complete - claim full payment from Request Payment.</p>
         </div>
       )}
       {false && pct >= 50 && pct < 100 && course.claimStatus === "not_requested" && (
@@ -3183,3 +3548,4 @@ export default function App() {
     </div>
   );
 }
+
