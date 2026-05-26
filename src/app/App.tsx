@@ -1,4 +1,4 @@
-anaimport { useState } from "react";
+import { useState } from "react";
 import {
   ChevronRight, ChevronLeft, FileText, ClipboardList, Star, Receipt,
   Clock, TrendingUp, AlertCircle, CheckCircle2, Users, MapPin, Video,
