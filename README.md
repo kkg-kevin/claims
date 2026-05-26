@@ -143,8 +143,8 @@ Claim calculations are currently handled in `src/app/App.tsx`.
 
 - Physical, center, and home sessions use a rate of `KSh 904`.
 - Online and Google Meet sessions use a rate of `KSh 500`.
-- Total earnings are calculated from attended/completed sessions and session duration.
-- Advance claims are calculated as 50% of the total earning.
+- Total earnings are calculated from the payable course session count and the course location rate.
+- Advance claims are calculated as 30% of the total earning.
 - Full claims become available when a course reaches full completion.
 - Completion combines attendance, graded assignments, and completed reports.
 
