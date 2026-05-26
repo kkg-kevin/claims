@@ -149,12 +149,36 @@ function StudentSessionView({
     );
   }
 
+  const totalStudents = course.students.length;
+  const sessionAttendanceCount = attendance.filter((r) => r.sessionId === session.id && r.present).length;
+  const sessionAssignmentCount = sessionAssignments.filter((r) => r.sessionId === session.id && r.status !== "issued").length;
+  const sessionReportCount = sessionReports.filter((r) => r.sessionId === session.id && r.done).length;
+  const sessionPercent = (count: number) => totalStudents > 0 ? Math.round((count / totalStudents) * 100) : 0;
+  const sessionSummary = [
+    { label: "Attendance", value: `${sessionPercent(sessionAttendanceCount)}%` },
+    { label: "Assignment", value: `${sessionPercent(sessionAssignmentCount)}%` },
+    { label: "Report", value: `${sessionPercent(sessionReportCount)}%` },
+  ];
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-bold text-foreground">Session {session.number}</h3>
-          <p className="text-xs text-muted-foreground">{session.date}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+          <div>
+            <h3 className="font-bold text-foreground">Session {session.number}</h3>
+            <p className="text-xs text-muted-foreground">{session.date}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {sessionSummary.map((item) => (
+              <div
+                key={item.label}
+                className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5"
+              >
+                <span className="text-[11px] font-semibold text-muted-foreground">{item.label}</span>
+                <span className="text-sm font-extrabold text-[#25476a]">{item.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
@@ -938,11 +962,15 @@ function calcCompletion(course: Course): number {
 }
 
 function calcTotalEarning(course: Course): number {
-  return RATE[course.locationType] * course.sessions.filter((s) => s.attended).length;
+  return RATE[course.locationType] * calcPayableSessionCount(course);
 }
 
 function calcAdvanceAmount(course: Course): number {
-  return Math.round(calcTotalEarning(course) * 0.5);
+  return Math.round(calcTotalEarning(course) * 0.3);
+}
+
+function calcPayableSessionCount(course: Course): number {
+  return course.locationType === "googlemeet" ? course.totalSessions : 12;
 }
 
 function totalHours(course: Course): number {
@@ -2164,6 +2192,7 @@ function InvoiceView({
   const advanceAmount = calcAdvanceAmount(course);
   const remainingAfterAdvance = totalEarning - course.advancePaidAmount;
   const [claimType, setClaimType] = useState<"full" | "advance" | null>(null);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
@@ -2181,6 +2210,15 @@ function InvoiceView({
     requestedAmount > 0 &&
     (claimType === "full" || advanceReason.trim())
   );
+
+  const openRequestDialog = () => {
+    setShowRequestDialog(true);
+    setClaimType(null);
+    setRequestAmount("");
+    setAdvanceReason("");
+    setRequestFeedback(null);
+    removeSelectedFile();
+  };
 
   const openRequestForm = (type: "advance" | "full") => {
     setClaimType(type);
@@ -2231,6 +2269,7 @@ function InvoiceView({
     });
     setCourses(updated);
     setShowConfirm(false);
+    setShowRequestDialog(false);
     setRequestFeedback("success");
     // clear selection after submit
     setSelectedFile(null);
@@ -2240,14 +2279,24 @@ function InvoiceView({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
-          <ChevronLeft size={20} />
-        </button>
-        <div>
-          <h2 className="font-bold text-foreground">Invoice</h2>
-          <p className="text-xs text-muted-foreground">{course.name}</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onBack} title="Back" className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">
+            <ChevronLeft size={20} />
+          </button>
+          <div className="min-w-0">
+            <h2 className="font-bold text-foreground">Unofficial Invoice</h2>
+            <p className="text-xs text-muted-foreground truncate">{course.name}</p>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={openRequestDialog}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452]"
+        >
+          <Receipt size={16} />
+          Request Payment
+        </button>
       </div>
 
       {/* Invoice header card */}
@@ -2406,7 +2455,7 @@ function InvoiceView({
             {pct >= 50 && pct < 100 && (
               <button onClick={() => { setClaimType("advance"); setShowConfirm(true); }}
                 className="w-full bg-[#feb139] text-[#12253a] py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors text-sm">
-                Claim Advance (50%) — KSh {advanceAmount.toLocaleString()}
+                Claim Advance (30%) — KSh {advanceAmount.toLocaleString()}
               </button>
             )}
             {pct >= 100 && (
@@ -2478,6 +2527,7 @@ function InvoiceView({
       </>
       )}
 
+      {false && (
       <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
@@ -2592,6 +2642,179 @@ function InvoiceView({
           </div>
         )}
       </div>
+      )}
+
+      {(requestFeedback || course.invoice) && (
+        <div className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-3">
+          {requestFeedback === "success" && (
+            <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+              <CheckCircle2 size={16} />
+              Payment request submitted for review.
+            </div>
+          )}
+          {requestFeedback === "error" && (
+            <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              <AlertCircle size={16} />
+              Add the required document, amount, and reason before submitting.
+            </div>
+          )}
+          {course.invoice && (
+            <div className="bg-muted rounded-lg p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText size={18} className="flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate">{course.invoice.fileName}</p>
+                  <p className="text-xs text-muted-foreground">Uploaded: {course.invoice.uploadedAt ? new Date(course.invoice.uploadedAt).toLocaleString() : "-"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <a href={course.invoice.fileUrl} download className="inline-flex items-center gap-2 bg-white rounded-xl px-3 py-2 text-sm font-semibold">
+                  <Download size={14} /> Download
+                </a>
+                <button onClick={removeInvoice} className="px-3 py-2 rounded-xl border border-border text-sm">Remove</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showRequestDialog && (
+        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={() => setShowRequestDialog(false)}>
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-[#e8f0f7] p-2 text-[#25476a]">
+                  <Receipt size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-foreground">Upload invoice</h3>
+                  <p className="text-xs text-muted-foreground">{course.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowRequestDialog(false)} title="Close" className="rounded-xl p-2 text-muted-foreground hover:bg-muted">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-4 p-5 lg:grid-cols-[300px_1fr]">
+              <div className="rounded-xl border border-[#38aae1]/20 bg-cyan-50 p-4">
+                <div className="mb-5">
+                  <p className="text-sm font-extrabold text-foreground">{completedSessions.length}/{course.totalSessions} Sessions</p>
+                  <p className="text-xs text-muted-foreground">{course.name}</p>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Estimated Earnings</span>
+                    <span className="font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Amount Advanced</span>
+                    <span className="font-extrabold text-[#25476a]">KSh {course.advancePaidAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Amount Claimed</span>
+                    <span className="font-extrabold text-[#25476a]">
+                      KSh {(course.claimStatus === "full_claimed" ? totalEarning : course.advancePaidAmount).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-6 grid gap-2">
+                  <button
+                    onClick={() => openRequestForm("advance")}
+                    disabled={!canClaimAdvance(course)}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Download size={14} />
+                    Request advance
+                  </button>
+                  <button
+                    onClick={() => openRequestForm("full")}
+                    disabled={!canClaimFull(course)}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Download size={14} />
+                    Request Payment
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-white p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-extrabold text-foreground">Activities</h4>
+                  <ChevronRight size={16} className="rotate-90 text-muted-foreground" />
+                </div>
+                <div className="mt-4 rounded-lg border border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                  {claimType ? `${claimType === "advance" ? "Advance" : "Full payment"} request in progress` : "No activity yet"}
+                </div>
+              </div>
+            </div>
+
+            {claimType && (
+              <div className="border-t border-border p-5">
+                <h4 className="font-extrabold text-foreground">
+                  {claimType === "advance" ? "Advance request" : "Full payment request"}
+                </h4>
+                <p className="mt-1 text-xs text-muted-foreground">Provide the required details and upload the invoice document.</p>
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                      {claimType === "advance" ? "Advance amount" : "Payment amount"}
+                      <input
+                        type="number"
+                        min="1"
+                        value={requestAmount}
+                        onChange={(e) => setRequestAmount(e.target.value)}
+                        className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40"
+                      />
+                    </label>
+                    {claimType === "advance" && (
+                      <label className="mt-4 flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                        Advance reason
+                        <input
+                          value={advanceReason}
+                          onChange={(e) => setAdvanceReason(e.target.value)}
+                          placeholder="Advance reason"
+                          className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40"
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#38aae1]/50 bg-white p-5 text-center transition-colors hover:bg-[#f8fbfe]">
+                    <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFileChange} className="sr-only" />
+                    <Download size={28} className="text-[#38aae1]" />
+                    <span className="mt-3 text-sm font-semibold text-foreground">Click or drag file to this area to upload</span>
+                    <span className="mt-1 text-xs text-muted-foreground">Accepted: PDF, DOC, images.</span>
+                    {selectedFileName && (
+                      <span className="mt-3 max-w-full truncate rounded-lg bg-muted px-3 py-1 text-xs font-semibold text-foreground">{selectedFileName}</span>
+                    )}
+                  </label>
+                </div>
+
+                {requestFeedback === "error" && (
+                  <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                    <AlertCircle size={16} />
+                    Add the required document, amount, and reason before submitting.
+                  </div>
+                )}
+
+                <div className="mt-5 flex justify-end gap-3">
+                  <button onClick={() => setShowRequestDialog(false)}
+                    className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setShowConfirm(true)}
+                    disabled={!canSubmitRequest}
+                    className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {claimType === "advance" ? "Request advance" : "Request payment"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowConfirm(false)}>
@@ -2659,6 +2882,16 @@ function CourseDetail({
   };
 
   const pct = calcCompletion(course);
+  const amountPayable = calcTotalEarning(course);
+  const advancePayable = calcAdvanceAmount(course);
+  const rate = RATE[course.locationType];
+  const requestedAmount = course.claimStatus === "advance_claimed"
+    ? course.advancePaidAmount
+    : ["full_claimed", "approved"].includes(course.claimStatus)
+      ? amountPayable
+      : 0;
+  const requestedLabel = course.claimStatus === "advance_claimed" ? "Requested Advance" : "Requested Payment";
+  const balanceAmount = Math.max(amountPayable - requestedAmount, 0);
   const attendanceRecords = getAttendanceRecords(course);
   const sessionAssignments = getSessionAssignmentRecords(course);
   const sessionReports = getSessionReportRecords(course);
@@ -2715,21 +2948,51 @@ function CourseDetail({
       </div>
 
       {/* Summary strip */}
-      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-sm">
-        <div className="relative flex-shrink-0">
-          <ProgressRing pct={pct} size={68} />
-          <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">{pct}%</span>
-        </div>
-        <div className="flex-1 grid grid-cols-2 gap-3">
-          {[
-            { label: "Students", val: course.students.length },
-            { label: "Sessions", val: `${course.sessions.filter((s) => s.attended).length}/${course.totalSessions}` },
-          ].map((item) => (
-            <div key={item.label} className="flex flex-col gap-0.5">
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-              <p className="font-bold text-foreground text-sm">{item.val}</p>
+      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+          <div className="flex items-center gap-4 lg:min-w-[250px]">
+            <div className="relative flex-shrink-0">
+              <ProgressRing pct={pct} size={68} />
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">{pct}%</span>
             </div>
-          ))}
+            <div className="grid grid-cols-1 gap-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Course Progress</p>
+                <p className="font-bold text-foreground text-sm">{pct}% complete</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Students</p>
+                <p className="font-bold text-foreground text-sm">{course.students.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-border bg-[#f8fbfe] px-4 py-3">
+              <p className="text-xs text-muted-foreground">Amount Payable</p>
+              <p className="mt-1 text-lg font-extrabold text-[#25476a] leading-tight">KSh {amountPayable.toLocaleString()}</p>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/70 pt-2">
+                <span className="text-[11px] font-semibold text-muted-foreground">Advance Payable</span>
+                <span className="text-sm font-extrabold text-amber-700">KSh {advancePayable.toLocaleString()}</span>
+              </div>
+              <p className="mt-1 text-[11px] font-semibold text-muted-foreground">Rate KSh {rate.toLocaleString()} · Advance 30%</p>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs text-amber-700/80">{requestedLabel}</p>
+              <p className="mt-1 text-lg font-extrabold text-amber-700 leading-tight">KSh {requestedAmount.toLocaleString()}</p>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-amber-200 pt-2">
+                <span className="text-[11px] font-semibold text-amber-700/70">Balance</span>
+                <span className="text-sm font-extrabold text-amber-800">KSh {balanceAmount.toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-white px-4 py-3">
+              <p className="text-xs text-muted-foreground">Requested</p>
+              <div className="mt-2">
+                <StatusBadge status={course.claimStatus} />
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
