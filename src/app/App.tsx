@@ -732,7 +732,7 @@ function makeStudentAssignments(students: Student[], assignments: Assignment[], 
   students.forEach((st) => {
     assignments.forEach((a, ai) => {
       const threshold = Math.floor(assignments.length * completedRatio);
-      const status: AssignmentStatus = ai < threshold - 1 ? "graded" : ai < threshold ? "submitted" : "issued";
+      const status: AssignmentStatus = completedRatio >= 1 ? "graded" : ai < threshold - 1 ? "graded" : ai < threshold ? "submitted" : "issued";
       records.push({
         studentId: st.id, assignmentId: a.id, status,
         score: status === "graded" ? Math.floor(Math.random() * 30) + 70 : undefined,
@@ -952,17 +952,17 @@ const INITIAL_COURSES: Course[] = [
     id: "c1", name: "Robotics & Automation", icon: <Cpu size={18} />, locationType: "center",
     locationName: "Westlands Learning Center", students: STUDENTS_C1, totalSessions: 12,
     sessions: makeSessions(12, 1.5, 12), assignments: ASSIGNMENTS_C1, reports: REPORTS_C1,
-    studentAssignments: makeStudentAssignments(STUDENTS_C1, ASSIGNMENTS_C1, 0.85),
-    studentReports: makeStudentReports(STUDENTS_C1, REPORTS_C1, 2),
+    studentAssignments: makeStudentAssignments(STUDENTS_C1, ASSIGNMENTS_C1, 1),
+    studentReports: makeStudentReports(STUDENTS_C1, REPORTS_C1, 3),
     claimStatus: "not_requested", advancePaidAmount: 0,
   },
   {
     id: "c2", name: "Introduction to Coding", icon: <Code2 size={18} />, locationType: "home",
     locationName: "Karen, Nairobi", students: STUDENTS_C2, totalSessions: 8,
     sessions: makeSessions(8, 1, 6), assignments: ASSIGNMENTS_C2, reports: REPORTS_C2,
-    studentAssignments: makeStudentAssignments(STUDENTS_C2, ASSIGNMENTS_C2, 0.67),
+    studentAssignments: makeStudentAssignments(STUDENTS_C2, ASSIGNMENTS_C2, 1),
     studentReports: makeStudentReports(STUDENTS_C2, REPORTS_C2, 1),
-    claimStatus: "advance_claimed", advancePaidAmount: 2712,
+    claimStatus: "not_requested", advancePaidAmount: 0,
   },
   {
     id: "c3", name: "Digital Art & Design", icon: <Palette size={18} />, locationType: "online",
@@ -3073,11 +3073,10 @@ function PaymentRequestView({
 }: {
   course: Course; courses: Course[]; setCourses: (c: Course[]) => void; onBack: () => void;
 }) {
-  const pct = calcCompletion(course);
-  const completedSessions = course.sessions.filter((s) => s.attended);
   const totalEarning = calcTotalEarning(course);
   const advanceAmount = calcAdvanceAmount(course);
   const remainingAfterAdvance = Math.max(totalEarning - course.advancePaidAmount, 0);
+  const hasAdvanceRequest = course.advancePaidAmount > 0;
   const [claimType, setClaimType] = useState<PaymentActivityType | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -3101,13 +3100,6 @@ function PaymentRequestView({
     setSelectedFileName(null);
   };
 
-  const removeInvoice = () => {
-    if (course.invoice?.fileUrl) {
-      try { URL.revokeObjectURL(course.invoice.fileUrl); } catch (e) { /**/ }
-    }
-    setCourses(courses.map((c) => c.id === course.id ? { ...c, invoice: undefined } : c));
-  };
-
   const openRequestForm = (type: PaymentActivityType) => {
     setClaimType(type);
     setRequestAmount(String(type === "advance" ? advanceAmount : remainingAfterAdvance));
@@ -3119,6 +3111,13 @@ function PaymentRequestView({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) {
+      removeSelectedFile();
+      setRequestFeedback("error");
+      e.target.value = "";
+      return;
+    }
+    setRequestFeedback(null);
     if (selectedFileUrl) {
       try { URL.revokeObjectURL(selectedFileUrl); } catch (e) { /**/ }
     }
@@ -3144,7 +3143,7 @@ function PaymentRequestView({
         amount: requestedAmount,
         status: "requested",
         requestedAt: now,
-        note: claimType === "advance" ? advanceReason.trim() : "Remaining course payment",
+        note: claimType === "advance" ? advanceReason.trim() : hasAdvanceRequest ? "Remaining course payment" : "Full course payment",
         invoiceFileName: selectedFileName ?? selectedFile?.name,
       };
       const base = claimType === "advance"
@@ -3180,128 +3179,115 @@ function PaymentRequestView({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-        <div className="rounded-xl border border-[#38aae1]/20 bg-cyan-50 p-4">
-          <div className="mb-5">
-            <p className="text-sm font-extrabold text-foreground">{completedSessions.length}/{course.totalSessions} Sessions</p>
-            <p className="text-xs text-muted-foreground">{pct}% complete</p>
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="mb-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-border bg-[#f8fbfe] px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Estimated earnings</p>
+            <p className="mt-1 font-mono text-lg font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</p>
           </div>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Estimated Earnings</span>
-              <span className="font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Advance Paid</span>
-              <span className="font-extrabold text-[#25476a]">KSh {course.advancePaidAmount.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">Remaining</span>
-              <span className="font-extrabold text-[#25476a]">KSh {remainingAfterAdvance.toLocaleString()}</span>
-            </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700/80">Amount advanced</p>
+            <p className="mt-1 font-mono text-lg font-extrabold text-amber-800">KSh {advanceAmount.toLocaleString()}</p>
           </div>
-          <div className="mt-6 grid gap-2">
-            <button onClick={() => openRequestForm("advance")} disabled={!canClaimAdvance(course)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40">
-              <Receipt size={14} />
-              Request advance
-            </button>
-            <button onClick={() => openRequestForm("full")} disabled={!canClaimFull(course)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40">
-              <Receipt size={14} />
-              Request Payment
-            </button>
+          <div className="rounded-xl border border-[#25476a]/20 bg-white px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Amount claimed</p>
+            <p className="mt-1 font-mono text-lg font-extrabold text-[#25476a]">
+              {claimType ? `KSh ${requestedAmount.toLocaleString()}` : "Select request"}
+            </p>
           </div>
-
-          {claimType && (
-            <div className="mt-4 rounded-xl border border-border bg-white p-4 shadow-sm">
-              <h3 className="font-extrabold text-foreground">{claimType === "advance" ? "Advance request" : "Full payment request"}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Add details and upload the invoice document.</p>
-
-              <div className="mt-4 flex flex-col gap-4">
-                <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
-                  {claimType === "advance" ? "Advance amount" : "Payment amount"}
-                  <input type="number" min="1" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)}
-                    className="min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
-                </label>
-
-                {claimType === "advance" && (
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
-                    Advance reason
-                    <input value={advanceReason} onChange={(e) => setAdvanceReason(e.target.value)} placeholder="Advance reason"
-                      className="min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
-                  </label>
-                )}
-
-                <label className="flex min-h-[130px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#38aae1]/50 bg-[#f8fbfe] p-4 text-center transition-colors hover:bg-white">
-                  <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFileChange} className="sr-only" />
-                  <Download size={24} className="text-[#38aae1]" />
-                  <span className="mt-2 text-sm font-semibold text-foreground">Click or drag file to upload</span>
-                  <span className="mt-1 text-xs text-muted-foreground">PDF, DOC, images.</span>
-                  {selectedFileName && <span className="mt-3 max-w-full truncate rounded-lg bg-muted px-3 py-1 text-xs font-semibold text-foreground">{selectedFileName}</span>}
-                </label>
-              </div>
-
-              {requestFeedback === "error" && (
-                <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                  <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
-                  Add the required document, amount, and reason before submitting.
-                </div>
-              )}
-
-              <div className="mt-4 grid gap-2">
-                <button onClick={() => setShowConfirm(true)} disabled={!canSubmitRequest}
-                  className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40">
-                  {claimType === "advance" ? "Request advance" : "Request payment"}
-                </button>
-                <button onClick={() => setClaimType(null)} className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="rounded-xl border border-border bg-white p-4">
-          <h4 className="text-sm font-extrabold text-foreground">Invoice</h4>
-          <div className="mt-4 flex flex-col gap-3">
-            <UnofficialInvoicePreview course={course} />
-            {course.invoice && (
-              <div className="rounded-xl border border-border bg-muted/30 p-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <FileText size={18} className="flex-shrink-0 text-[#25476a]" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-foreground">{course.invoice.fileName}</p>
-                      {course.invoice.uploadedAt && (
-                        <p className="text-xs text-muted-foreground">Uploaded {formatPaymentDate(course.invoice.uploadedAt)}</p>
-                      )}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => openRequestForm("advance")}
+            disabled={!canClaimAdvance(course)}
+            className={`rounded-xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${claimType === "advance" ? "border-[#25476a] bg-[#f8fbfe] ring-2 ring-[#25476a]/10" : "border-border bg-white hover:bg-[#f8fbfe]"}`}
+          >
+            <div className="flex items-center gap-2">
+              <Receipt size={16} className="text-[#25476a]" />
+              <span className="text-sm font-extrabold text-foreground">Advance request</span>
+            </div>
+            <p className="mt-2 font-mono text-sm font-extrabold text-[#25476a]">KSh {advanceAmount.toLocaleString()}</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openRequestForm("full")}
+            disabled={!canClaimFull(course)}
+            className={`rounded-xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${claimType === "full" ? "border-[#25476a] bg-[#f8fbfe] ring-2 ring-[#25476a]/10" : "border-border bg-white hover:bg-[#f8fbfe]"}`}
+          >
+            <div className="flex items-center gap-2">
+              <Receipt size={16} className="text-[#25476a]" />
+              <span className="text-sm font-extrabold text-foreground">Request payment</span>
+            </div>
+            <p className="mt-2 font-mono text-sm font-extrabold text-[#25476a]">KSh {(hasAdvanceRequest ? remainingAfterAdvance : totalEarning).toLocaleString()}</p>
+          </button>
+        </div>
+
+        {claimType && (
+          <div className="mt-4 rounded-xl border border-border bg-white p-4">
+            <h3 className="font-extrabold text-foreground">{claimType === "advance" ? "Advance request" : "Payment request"}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Upload a PDF invoice before submitting.</p>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="flex flex-col gap-4">
+                {claimType === "advance" ? (
+                  <>
+                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                      Advance amount
+                      <input type="number" min="1" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)}
+                        className="min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
+                    </label>
+                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
+                      Advance reason
+                      <input value={advanceReason} onChange={(e) => setAdvanceReason(e.target.value)} placeholder="Advance reason"
+                        className="min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
+                    </label>
+                  </>
+                ) : (
+                  <div className="grid gap-3">
+                    <div className="rounded-xl border border-border bg-[#f8fbfe] px-4 py-3">
+                      <p className="text-xs font-semibold text-muted-foreground">Full amount</p>
+                      <p className="mt-1 font-mono text-lg font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</p>
                     </div>
+                    {hasAdvanceRequest && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <p className="text-xs font-semibold text-amber-700/80">Balance after advance claim</p>
+                        <p className="mt-1 font-mono text-lg font-extrabold text-amber-800">KSh {remainingAfterAdvance.toLocaleString()}</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <a
-                      href={course.invoice.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground hover:bg-[#f8fbfe]"
-                    >
-                      <Eye size={14} />
-                      View
-                    </a>
-                    <button
-                      type="button"
-                      onClick={removeInvoice}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted"
-                    >
-                      <X size={14} />
-                      Remove
-                    </button>
-                  </div>
-                </div>
+                )}
+              </div>
+
+              <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#38aae1]/50 bg-[#f8fbfe] p-4 text-center transition-colors hover:bg-white">
+                <input type="file" accept=".pdf,application/pdf" onChange={handleFileChange} className="sr-only" />
+                <Download size={26} className="text-[#38aae1]" />
+                <span className="mt-2 text-sm font-semibold text-foreground">Upload PDF invoice</span>
+                <span className="mt-1 text-xs text-muted-foreground">PDF only.</span>
+                {selectedFileName && <span className="mt-3 max-w-full truncate rounded-lg bg-muted px-3 py-1 text-xs font-semibold text-foreground">{selectedFileName}</span>}
+              </label>
+            </div>
+
+            {requestFeedback === "error" && (
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
+                Add the required amount, reason where needed, and a PDF invoice before submitting.
               </div>
             )}
+
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button onClick={() => setClaimType(null)} className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+                Cancel
+              </button>
+              <button onClick={() => setShowConfirm(true)} disabled={!canSubmitRequest}
+                className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40">
+                {claimType === "advance" ? "Submit advance request" : "Submit payment request"}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {requestFeedback === "success" && (
