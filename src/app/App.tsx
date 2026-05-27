@@ -267,41 +267,42 @@ function StudentSessionView({
   ];
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-          <div>
-            <h3 className="font-bold text-foreground">Session {session.number}</h3>
-            <p className="text-xs text-muted-foreground">{session.date}</p>
+    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-border bg-muted/30 px-4 py-3 sm:px-5 sm:py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="min-w-[120px]">
+              <h3 className="font-extrabold text-foreground leading-tight">Session {session.number}</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">{session.date}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {sessionSummary.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex min-h-8 items-center gap-2 rounded-full border border-border bg-white px-3 py-1"
+                >
+                  <span className="text-[11px] font-semibold text-muted-foreground">{item.label}</span>
+                  <span className="text-sm font-extrabold text-[#25476a]">{item.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {sessionSummary.map((item) => (
-              <div
-                key={item.label}
-                className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5"
-              >
-                <span className="text-[11px] font-semibold text-muted-foreground">{item.label}</span>
-                <span className="text-sm font-extrabold text-[#25476a]">{item.value}</span>
-              </div>
-            ))}
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
+              title="Previous session"
+              className="p-2 rounded-xl hover:bg-white transition-colors text-muted-foreground disabled:opacity-40">
+              <ChevronLeft size={18} />
+            </button>
+            <div className="min-w-12 text-center text-xs font-semibold text-muted-foreground">{index + 1} / {sessions.length}</div>
+            <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1}
+              title="Next session"
+              className="p-2 rounded-xl hover:bg-white transition-colors text-muted-foreground disabled:opacity-40">
+              <ChevronRight size={18} />
+            </button>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
-            title="Previous session"
-            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
-            <ChevronLeft size={18} />
-          </button>
-          <div className="text-xs text-muted-foreground">{index + 1} / {sessions.length}</div>
-          <button onClick={() => setIndex((i) => Math.min(sessions.length - 1, i + 1))} disabled={index === sessions.length - 1}
-            title="Next session"
-            className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
-            <ChevronRight size={18} />
-          </button>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead>
@@ -386,7 +387,6 @@ function StudentSessionView({
             </tbody>
           </table>
         </div>
-      </div>
 
       {/* session-level modals removed; navigation opens dedicated pages */}
     </div>
@@ -3142,7 +3142,7 @@ function PaymentRequestView({
         id: `${c.id}-${claimType}-${now}`,
         type: claimType,
         amount: requestedAmount,
-        status: claimType === "advance" ? "paid" : "requested",
+        status: "requested",
         requestedAt: now,
         note: claimType === "advance" ? advanceReason.trim() : "Remaining course payment",
         invoiceFileName: selectedFileName ?? selectedFile?.name,
@@ -3411,12 +3411,6 @@ function UnofficialInvoicePreview({ course }: { course: Course }) {
         </table>
       </div>
 
-      {course.advancePaidAmount > 0 && (
-        <div className="flex items-center justify-between gap-3 border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-          <span className="font-semibold text-amber-700">Advance paid</span>
-          <span className="font-mono font-bold text-amber-700">KSh {course.advancePaidAmount.toLocaleString()}</span>
-        </div>
-      )}
     </div>
   );
 }
@@ -3508,14 +3502,9 @@ function CourseDetail({
           </div>
 
           <div className="border-t border-border p-4 sm:p-5 lg:border-l lg:border-t-0">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Amount payable</p>
-                <p className="mt-1 text-2xl font-extrabold leading-tight text-[#25476a]">KSh {amountPayable.toLocaleString()}</p>
-              </div>
-              <div className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
-                {pct >= 100 ? "Ready" : "In progress"}
-              </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Amount payable</p>
+              <p className="mt-1 text-2xl font-extrabold leading-tight text-[#25476a]">KSh {amountPayable.toLocaleString()}</p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
