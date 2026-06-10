@@ -202,7 +202,7 @@ function StudentSessionView({
             </div>
             <div className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5">
               <span className="text-[11px] font-semibold text-muted-foreground">Completed</span>
-              <span className="text-sm font-extrabold text-green-700">{completedCount}</span>
+              <span className="text-sm font-extrabold text-[#ca8a04]">{completedCount}</span>
             </div>
             <div className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5">
               <span className="text-[11px] font-semibold text-muted-foreground">Cancelled</span>
@@ -235,7 +235,7 @@ function StudentSessionView({
                       <button
                         type="button"
                         onClick={() => updateSession(item.id, { attended: !item.attended })}
-                        className={`inline-flex min-w-[108px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${item.attended ? "border-green-200 bg-green-50 text-green-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}
+                        className={`inline-flex min-w-[108px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${item.attended ? "border-[#feb139]/20 bg-[#fffbf0] text-[#ca8a04]" : "border-rose-200 bg-rose-50 text-rose-700"}`}
                       >
                         {item.attended ? "Completed" : "Cancelled"}
                       </button>
@@ -279,10 +279,10 @@ function StudentSessionView({
               {sessionSummary.map((item) => (
                 <div
                   key={item.label}
-                  className="flex min-h-8 items-center gap-2 rounded-full border border-border bg-white px-3 py-1"
+                  className="flex min-h-8 items-center gap-2 rounded-full border border-[#feb139]/20 bg-[#fffbf0] px-3 py-1"
                 >
                   <span className="text-[11px] font-semibold text-muted-foreground">{item.label}</span>
-                  <span className="text-sm font-extrabold text-[#25476a]">{item.value}</span>
+                  <span className="text-sm font-extrabold text-[#ca8a04]">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -350,12 +350,12 @@ function StudentSessionView({
                       <button
                         type="button"
                         onClick={() => toggleAttendance(st.id)}
-                        className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
+                        className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-[#feb139]" : "bg-slate-300"}`}
                         title={present ? "Mark absent" : "Mark present"}
                       >
                         <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
                       </button>
-                      <p className={`mt-1 text-[10px] font-semibold ${present ? "text-green-600" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
+                      <p className={`mt-1 text-[10px] font-semibold ${present ? "text-[#ca8a04]" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
                     </td>
 
                     <td className="px-3 py-3 text-center">
@@ -371,7 +371,7 @@ function StudentSessionView({
                     <td className="px-3 py-3 text-center">
                       {rRec ? (
                         <span
-                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${rRec.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${rRec.done ? "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
                           {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
                           {rRec.done ? "Done" : "Pending"}
                         </span>
@@ -474,9 +474,9 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
             <p className="mt-1 text-sm text-muted-foreground">{session.date} · {course.students.length} students</p>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-green-50 px-3 py-2">
-              <p className="text-base font-extrabold text-green-700">{gradedCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-green-700/70">Graded</p>
+            <div className="rounded-xl bg-[#fffbf0] px-3 py-2">
+              <p className="text-base font-extrabold text-[#ca8a04]">{gradedCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#ca8a04]/70">Graded</p>
             </div>
             <div className="rounded-xl bg-amber-50 px-3 py-2">
               <p className="text-base font-extrabold text-amber-700">{submittedCount}</p>
@@ -633,9 +633,9 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
             <p className="mt-1 text-sm text-muted-foreground">{session.date} · {course.students.length} students</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="rounded-xl bg-green-50 px-4 py-2">
-              <p className="text-base font-extrabold text-green-700">{doneCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-green-700/70">Done</p>
+            <div className="rounded-xl bg-[#fffbf0] px-4 py-2">
+              <p className="text-base font-extrabold text-[#ca8a04]">{doneCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#ca8a04]/70">Done</p>
             </div>
             <div className="rounded-xl bg-rose-50 px-4 py-2">
               <p className="text-base font-extrabold text-rose-600">{pendingCount}</p>
@@ -1144,8 +1144,8 @@ function formatPaymentDate(value: string): string {
 function paymentStatusClass(status: PaymentActivityStatus): string {
   const statusClass: Record<PaymentActivityStatus, string> = {
     requested: "bg-blue-50 text-blue-700 border-blue-200",
-    paid: "bg-green-50 text-green-700 border-green-200",
-    approved: "bg-green-50 text-green-700 border-green-200",
+    paid: "bg-[#fffbf0] text-[#ca8a04] border-[#feb139]/20",
+    approved: "bg-[#fffbf0] text-[#ca8a04] border-[#feb139]/20",
     denied: "bg-red-50 text-red-700 border-red-200",
   };
   return statusClass[status];
@@ -1302,7 +1302,7 @@ function AssignmentStatusChip({ status, onClick }: { status: AssignmentStatus; o
   const map: Record<AssignmentStatus, { label: string; cls: string }> = {
     issued: { label: "Issued", cls: "bg-slate-100 text-slate-500 border border-slate-200" },
     submitted: { label: "Submitted", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
-    graded: { label: "Graded", cls: "bg-green-50 text-green-700 border border-green-200" },
+    graded: { label: "Graded", cls: "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" },
   };
   const { label, cls } = map[status];
   return (
@@ -1468,8 +1468,8 @@ function AssignmentDetailModal({ student, assignment, record, onClose, onUpdate 
                 </div>
               )}
               {record.gradedAt && (
-                <div className="bg-green-50 rounded-xl p-3">
-                  <p className="text-xs text-green-600 font-semibold">Graded</p>
+                <div className="bg-[#fffbf0] rounded-xl p-3">
+                  <p className="text-xs text-[#ca8a04] font-semibold">Graded</p>
                   <p className="text-sm font-bold text-foreground mt-0.5">{record.gradedAt}</p>
                 </div>
               )}
@@ -1644,7 +1644,7 @@ function AttendanceView({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20">
           <span className="font-extrabold">{presentCount}</span> Present marks
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
@@ -1688,11 +1688,11 @@ function AttendanceView({
                           type="button"
                           onClick={() => toggleAttendance(student.id, session.id)}
                           title={present ? "Mark absent" : "Mark present"}
-                          className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-green-500" : "bg-slate-300"}`}
+                          className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-[#feb139]" : "bg-slate-300"}`}
                         >
                           <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
                         </button>
-                        <p className={`mt-1 text-[10px] font-semibold ${present ? "text-green-600" : "text-slate-500"}`}>
+                        <p className={`mt-1 text-[10px] font-semibold ${present ? "text-[#ca8a04]" : "text-slate-500"}`}>
                           {present ? "Present" : "Absent"}
                         </p>
                       </td>
@@ -1752,7 +1752,7 @@ function AssignmentsView({
         {[
           { label: "Not Submitted", val: notSubmitted, cls: "bg-slate-100 text-slate-600" },
           { label: "Awaiting Grade", val: pendingGrade, cls: "bg-amber-100 text-amber-700" },
-          { label: "Graded", val: graded, cls: "bg-green-100 text-green-700" },
+          { label: "Graded", val: graded, cls: "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" },
         ].map((s) => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${s.cls}`}>
             <span className="font-extrabold">{s.val}</span> {s.label}
@@ -1831,9 +1831,9 @@ function AssignmentsView({
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
                     <span><strong className="text-foreground">{submittedCount}</strong>/{total} submitted</span>
-                    <span><strong className="text-green-600">{gradedCount}</strong>/{total} graded</span>
+                    <span><strong className="text-[#ca8a04]">{gradedCount}</strong>/{total} graded</span>
                   </div>
-                  <ProgressBar pct={total > 0 ? (gradedCount / total) * 100 : 0} color="#16a34a" />
+                  <ProgressBar pct={total > 0 ? (gradedCount / total) * 100 : 0} color="#feb139" />
                 </div>
               );
             })}
@@ -1901,7 +1901,7 @@ function ReportsView({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20">
           <span className="font-extrabold">{doneCount}</span> Done
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-600">
@@ -1956,7 +1956,7 @@ function ReportsView({
                           <td key={session.id} className="px-3 py-3 text-center">
                             <button
                               onClick={() => setDetail({ student, report: rep, record })}
-                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${record.done ? "bg-green-50 text-green-700 border border-green-200" : "bg-rose-50 text-rose-600 border border-rose-200"}`}
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${record.done ? "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" : "bg-rose-50 text-rose-600 border border-rose-200"}`}
                             >
                               {record.done ? <CheckSquare size={11} /> : <Square size={11} />}
                               {record.done ? "Done" : "Pending"}
@@ -3624,6 +3624,12 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
             {course.sessions.filter((s) => s.attended).length}/{course.totalSessions}
           </p>
         </div>
+        <div className="text-right">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Amount Payable</p>
+          <p className="text-sm font-extrabold text-foreground leading-tight">
+            KSh {calcTotalEarning(course).toLocaleString()}
+          </p>
+        </div>
       </div>
     </button>
   );
@@ -3637,6 +3643,7 @@ export default function App() {
   const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const selectedCourse = selectedId ? courses.find((c) => c.id === selectedId) ?? null : null;
 
@@ -3645,6 +3652,14 @@ export default function App() {
     if (filterTab === "advance_claimed" && c.claimStatus !== "advance_claimed") return false;
     if (filterTab === "approved" && c.claimStatus !== "approved") return false;
     if (filterTab === "denied" && c.claimStatus !== "denied") return false;
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      if (!c.name.toLowerCase().includes(query) && !c.locationName.toLowerCase().includes(query)) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
@@ -3672,35 +3687,50 @@ export default function App() {
         ) : (
           <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5">
             {/* Title */}
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-tight">My Claims</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Track payments for your teaching sessions</p>
-              </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-tight">My Claims</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Track payments for your teaching sessions</p>
             </div>
 
             {/* Stats */}
             <StatCards courses={courses} />
 
-            {/* Status tabs */}
-            <div className="flex items-center justify-end gap-0 border-b border-border overflow-x-auto scrollbar-hide">
-              {filterTabs.map((tab) => {
-                const count = courses.filter((c) => {
-                  if (tab.key === "all") return true;
-                  if (tab.key === "new") return c.claimStatus === "not_requested";
-                  return c.claimStatus === tab.key;
-                }).length;
-                return (
-                  <button key={tab.key} onClick={() => setFilterTab(tab.key)}
-                    className={`relative pb-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${filterTab === tab.key ? "text-[#25476a]" : "text-muted-foreground hover:text-foreground"}`}>
-                    {tab.label}
-                    {count > 0 && (
-                      <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${filterTab === tab.key ? "bg-[#25476a] text-white" : "bg-muted text-muted-foreground"}`}>{count}</span>
-                    )}
-                    {filterTab === tab.key && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#25476a] rounded-t-full" />}
-                  </button>
-                );
-              })}
+            {/* Filter and Search */}
+            <div className="flex items-center gap-3 flex-wrap justify-end">
+              <div className="flex items-center gap-2">
+                <label htmlFor="filter-select" className="text-xs sm:text-sm font-semibold text-muted-foreground whitespace-nowrap">Filter:</label>
+                <select 
+                  id="filter-select"
+                  value={filterTab} 
+                  onChange={(e) => setFilterTab(e.target.value as FilterTab)}
+                  aria-label="Filter courses by status"
+                  className="px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm font-semibold hover:border-muted-foreground transition-colors cursor-pointer"
+                >
+                  {filterTabs.map((tab) => {
+                    const count = courses.filter((c) => {
+                      if (tab.key === "all") return true;
+                      if (tab.key === "new") return c.claimStatus === "not_requested";
+                      return c.claimStatus === tab.key;
+                    }).length;
+                    return (
+                      <option key={tab.key} value={tab.key}>
+                        {tab.label} {count > 0 ? `(${count})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <Search size={18} className="text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search courses..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm placeholder-muted-foreground hover:border-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-[#25476a]/20"
+                />
+              </div>
             </div>
 
             {/* Grid */}
