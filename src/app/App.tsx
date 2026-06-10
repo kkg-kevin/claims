@@ -3683,7 +3683,7 @@ export default function App() {
             <StatCards courses={courses} />
 
             {/* Status tabs */}
-            <div className="flex items-center gap-0 border-b border-border overflow-x-auto scrollbar-hide">
+            <div className="flex items-center justify-end gap-0 border-b border-border overflow-x-auto scrollbar-hide">
               {filterTabs.map((tab) => {
                 const count = courses.filter((c) => {
                   if (tab.key === "all") return true;
