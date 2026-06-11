@@ -41,6 +41,7 @@ interface Session {
   date: string;
   duration: SessionDuration;
   attended: boolean;
+  paid?: boolean;
 }
 
 interface StudentAssignment {
@@ -219,7 +220,7 @@ function StudentSessionView({
                   <th className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Session</th>
                   <th className="text-left px-3 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Scheduled</th>
                   <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Status</th>
-                  <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Duration</th>
+                  <th className="px-3 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-wide">Payment Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -237,13 +238,17 @@ function StudentSessionView({
                         onClick={() => updateSession(item.id, { attended: !item.attended })}
                         className={`inline-flex min-w-[108px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${item.attended ? "border-[#feb139]/20 bg-[#fffbf0] text-[#ca8a04]" : "border-rose-200 bg-rose-50 text-rose-700"}`}
                       >
-                        {item.attended ? "Completed" : "Cancelled"}
+                        {item.attended ? "Completed" : "Not Completed"}
                       </button>
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <span className="inline-flex min-w-[72px] justify-center rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs font-bold text-foreground">
-                        {formatDuration(item.duration)}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateSession(item.id, { paid: !item.paid })}
+                        className={`inline-flex min-w-[72px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${item.paid ? "border-green-200 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-700"}`}
+                      >
+                        {item.paid ? "Paid" : "Not Paid"}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -2431,14 +2436,13 @@ function InvoiceView({
   const [advanceReason, setAdvanceReason] = useState("");
   const [requestFeedback, setRequestFeedback] = useState<"success" | "error" | null>(null);
   const totalHrs = completedSessions.reduce((s, x) => s + x.duration, 0);
-  const defaultRequestAmount = claimType === "advance" ? advanceAmount : remainingAfterAdvance;
+  const defaultRequestAmount = remainingAfterAdvance;
   const parsedRequestAmount = Number(requestAmount);
   const requestedAmount = Number.isFinite(parsedRequestAmount) && parsedRequestAmount > 0 ? parsedRequestAmount : defaultRequestAmount;
   const canSubmitRequest = Boolean(
     claimType &&
     selectedFile &&
-    requestedAmount > 0 &&
-    (claimType === "full" || advanceReason.trim())
+    requestedAmount > 0
   );
 
   const openRequestDialog = () => {
@@ -2491,7 +2495,7 @@ function InvoiceView({
     }
     const updated = courses.map((c) => {
       if (c.id !== course.id) return c;
-      const base = claimType === "advance" ? { ...c, claimStatus: "advance_claimed" as ClaimStatus, advancePaidAmount: requestedAmount } : { ...c, claimStatus: "full_claimed" as ClaimStatus };
+      const base = { ...c, claimStatus: "full_claimed" as ClaimStatus };
       if (selectedFile && selectedFileUrl) {
         return { ...base, invoice: { fileName: selectedFileName ?? selectedFile.name, fileUrl: selectedFileUrl, uploadedAt: new Date().toISOString() } };
       }
@@ -2610,7 +2614,7 @@ function InvoiceView({
       </div>
 
       {/* Advance info */}
-      {course.advancePaidAmount > 0 && (
+      {course.advancePaidAmount > 0 && course.locationType !== "googlemeet" && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between text-sm">
           <span className="text-amber-700 font-semibold">Advance paid</span>
           <span className="font-bold font-mono text-amber-700">KSh {course.advancePaidAmount.toLocaleString()}</span>
@@ -2712,13 +2716,6 @@ function InvoiceView({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
-            onClick={() => { setClaimType("advance"); setShowConfirm(true); }}
-            disabled={!canClaimAdvance(course) || !selectedFile}
-            className="rounded-xl bg-[#feb139] px-4 py-3 text-sm font-bold text-[#12253a] transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Request Advance - KSh {advanceAmount.toLocaleString()}
-          </button>
-          <button
             onClick={() => { setClaimType("full"); setShowConfirm(true); }}
             disabled={!canClaimFull(course) || !selectedFile}
             className="rounded-xl bg-[#25476a] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
@@ -2761,14 +2758,7 @@ function InvoiceView({
           <StatusBadge status={course.claimStatus} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            onClick={() => openRequestForm("advance")}
-            disabled={!canClaimAdvance(course)}
-            className="rounded-xl bg-[#feb139] px-4 py-3 text-sm font-bold text-[#12253a] transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Request Advance
-          </button>
+        <div className="grid grid-cols-1 gap-3">
           <button
             onClick={() => openRequestForm("full")}
             disabled={!canClaimFull(course)}
@@ -2929,10 +2919,12 @@ function InvoiceView({
                     <span className="text-muted-foreground">Estimated Earnings</span>
                     <span className="font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Amount Advanced</span>
-                    <span className="font-extrabold text-[#25476a]">KSh {course.advancePaidAmount.toLocaleString()}</span>
-                  </div>
+                  {course.locationType !== "googlemeet" && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">Amount Advanced</span>
+                      <span className="font-extrabold text-[#25476a]">KSh {course.advancePaidAmount.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Amount Claimed</span>
                     <span className="font-extrabold text-[#25476a]">
@@ -2941,14 +2933,6 @@ function InvoiceView({
                   </div>
                 </div>
                 <div className="mt-6 grid gap-2">
-                  <button
-                    onClick={() => openRequestForm("advance")}
-                    disabled={!canClaimAdvance(course)}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Download size={14} />
-                    Request advance
-                  </button>
                   <button
                     onClick={() => openRequestForm("full")}
                     disabled={!canClaimFull(course)}
@@ -2974,13 +2958,13 @@ function InvoiceView({
             {claimType && (
               <div className="border-t border-border p-5">
                 <h4 className="font-extrabold text-foreground">
-                  {claimType === "advance" ? "Advance request" : "Full payment request"}
+                  Full payment request
                 </h4>
                 <p className="mt-1 text-xs text-muted-foreground">Provide the required details and upload the invoice document.</p>
                 <div className="mt-4 grid gap-4 lg:grid-cols-2">
                   <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
                     <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
-                      {claimType === "advance" ? "Advance amount" : "Payment amount"}
+                      Payment amount
                       <input
                         type="number"
                         min="1"
@@ -2989,17 +2973,6 @@ function InvoiceView({
                         className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40"
                       />
                     </label>
-                    {claimType === "advance" && (
-                      <label className="mt-4 flex flex-col gap-1.5 text-sm font-semibold text-foreground">
-                        Advance reason
-                        <input
-                          value={advanceReason}
-                          onChange={(e) => setAdvanceReason(e.target.value)}
-                          placeholder="Advance reason"
-                          className="rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40"
-                        />
-                      </label>
-                    )}
                   </div>
                   <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#38aae1]/50 bg-white p-5 text-center transition-colors hover:bg-[#f8fbfe]">
                     <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={handleFileChange} className="sr-only" />
@@ -3015,7 +2988,7 @@ function InvoiceView({
                 {requestFeedback === "error" && (
                   <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
                     <AlertCircle size={16} />
-                    Add the required document, amount, and reason before submitting.
+                    Add the required document and amount before submitting.
                   </div>
                 )}
 
@@ -3029,7 +3002,7 @@ function InvoiceView({
                     disabled={!canSubmitRequest}
                     className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {claimType === "advance" ? "Request advance" : "Request payment"}
+                    Request payment
                   </button>
                 </div>
               </div>
@@ -3042,12 +3015,10 @@ function InvoiceView({
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowConfirm(false)}>
           <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-foreground text-base mb-2">
-              Confirm {claimType === "advance" ? "Advance" : "Full"} Payment Claim
+              Confirm Payment Claim
             </h3>
             <p className="text-sm text-muted-foreground mb-5">
-              {claimType === "advance"
-                ? `Requesting KSh ${requestedAmount.toLocaleString()} advance for ${course.name}. This will be reviewed by your coordinator.`
-                : `Requesting full payment of KSh ${requestedAmount.toLocaleString()} for ${course.name}.`}
+              Requesting full payment of KSh {requestedAmount.toLocaleString()} for {course.name}.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setShowConfirm(false)}
@@ -3086,10 +3057,10 @@ function PaymentRequestView({
   const [advanceReason, setAdvanceReason] = useState("");
   const [requestFeedback, setRequestFeedback] = useState<"success" | "error" | null>(null);
 
-  const defaultRequestAmount = claimType === "advance" ? advanceAmount : remainingAfterAdvance;
+  const defaultRequestAmount = remainingAfterAdvance;
   const parsedRequestAmount = Number(requestAmount);
   const requestedAmount = Number.isFinite(parsedRequestAmount) && parsedRequestAmount > 0 ? parsedRequestAmount : defaultRequestAmount;
-  const canSubmitRequest = Boolean(claimType && selectedFile && requestedAmount > 0 && (claimType === "full" || advanceReason.trim()));
+  const canSubmitRequest = Boolean(claimType && selectedFile && requestedAmount > 0);
 
   const removeSelectedFile = () => {
     if (selectedFileUrl) {
@@ -3139,16 +3110,14 @@ function PaymentRequestView({
       const existingActivities = c.paymentActivities ?? getPaymentActivities(c);
       const activity: PaymentActivity = {
         id: `${c.id}-${claimType}-${now}`,
-        type: claimType,
+        type: "full",
         amount: requestedAmount,
         status: "requested",
         requestedAt: now,
-        note: claimType === "advance" ? advanceReason.trim() : hasAdvanceRequest ? "Remaining course payment" : "Full course payment",
+        note: hasAdvanceRequest ? "Remaining course payment" : "Full course payment",
         invoiceFileName: selectedFileName ?? selectedFile?.name,
       };
-      const base = claimType === "advance"
-        ? { ...c, claimStatus: "advance_claimed" as ClaimStatus, advancePaidAmount: requestedAmount }
-        : { ...c, claimStatus: "full_claimed" as ClaimStatus };
+      const base = { ...c, claimStatus: "full_claimed" as ClaimStatus };
       return {
         ...base,
         paymentActivities: [...existingActivities, activity],
@@ -3185,10 +3154,12 @@ function PaymentRequestView({
             <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Estimated earnings</p>
             <p className="mt-1 font-mono text-lg font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</p>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700/80">Amount advanced</p>
-            <p className="mt-1 font-mono text-lg font-extrabold text-amber-800">KSh {advanceAmount.toLocaleString()}</p>
-          </div>
+          {course.locationType !== "googlemeet" && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700/80">Amount advanced</p>
+              <p className="mt-1 font-mono text-lg font-extrabold text-amber-800">KSh {advanceAmount.toLocaleString()}</p>
+            </div>
+          )}
           <div className="rounded-xl border border-[#25476a]/20 bg-white px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Amount claimed</p>
             <p className="mt-1 font-mono text-lg font-extrabold text-[#25476a]">
@@ -3197,20 +3168,7 @@ function PaymentRequestView({
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => openRequestForm("advance")}
-            disabled={!canClaimAdvance(course)}
-            className={`rounded-xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${claimType === "advance" ? "border-[#25476a] bg-[#f8fbfe] ring-2 ring-[#25476a]/10" : "border-border bg-white hover:bg-[#f8fbfe]"}`}
-          >
-            <div className="flex items-center gap-2">
-              <Receipt size={16} className="text-[#25476a]" />
-              <span className="text-sm font-extrabold text-foreground">Advance request</span>
-            </div>
-            <p className="mt-2 font-mono text-sm font-extrabold text-[#25476a]">KSh {advanceAmount.toLocaleString()}</p>
-          </button>
-
+        <div className="grid gap-3">
           <button
             type="button"
             onClick={() => openRequestForm("full")}
@@ -3227,38 +3185,23 @@ function PaymentRequestView({
 
         {claimType && (
           <div className="mt-4 rounded-xl border border-border bg-white p-4">
-            <h3 className="font-extrabold text-foreground">{claimType === "advance" ? "Advance request" : "Payment request"}</h3>
+            <h3 className="font-extrabold text-foreground">Payment request</h3>
             <p className="mt-1 text-xs text-muted-foreground">Upload a PDF invoice before submitting.</p>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
               <div className="flex flex-col gap-4">
-                {claimType === "advance" ? (
-                  <>
-                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
-                      Advance amount
-                      <input type="number" min="1" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)}
-                        className="min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
-                    </label>
-                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-foreground">
-                      Advance reason
-                      <input value={advanceReason} onChange={(e) => setAdvanceReason(e.target.value)} placeholder="Advance reason"
-                        className="min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40" />
-                    </label>
-                  </>
-                ) : (
-                  <div className="grid gap-3">
-                    <div className="rounded-xl border border-border bg-[#f8fbfe] px-4 py-3">
-                      <p className="text-xs font-semibold text-muted-foreground">Full amount</p>
-                      <p className="mt-1 font-mono text-lg font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</p>
-                    </div>
-                    {hasAdvanceRequest && (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                        <p className="text-xs font-semibold text-amber-700/80">Balance after advance claim</p>
-                        <p className="mt-1 font-mono text-lg font-extrabold text-amber-800">KSh {remainingAfterAdvance.toLocaleString()}</p>
-                      </div>
-                    )}
+                <div className="grid gap-3">
+                  <div className="rounded-xl border border-border bg-[#f8fbfe] px-4 py-3">
+                    <p className="text-xs font-semibold text-muted-foreground">Full amount</p>
+                    <p className="mt-1 font-mono text-lg font-extrabold text-[#25476a]">KSh {totalEarning.toLocaleString()}</p>
                   </div>
-                )}
+                  {hasAdvanceRequest && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p className="text-xs font-semibold text-amber-700/80">Balance after advance claim</p>
+                      <p className="mt-1 font-mono text-lg font-extrabold text-amber-800">KSh {remainingAfterAdvance.toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#38aae1]/50 bg-[#f8fbfe] p-4 text-center transition-colors hover:bg-white">
@@ -3273,7 +3216,7 @@ function PaymentRequestView({
             {requestFeedback === "error" && (
               <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
                 <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />
-                Add the required amount, reason where needed, and a PDF invoice before submitting.
+                Add the required amount and a PDF invoice before submitting.
               </div>
             )}
 
@@ -3283,7 +3226,7 @@ function PaymentRequestView({
               </button>
               <button onClick={() => setShowConfirm(true)} disabled={!canSubmitRequest}
                 className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40">
-                {claimType === "advance" ? "Submit advance request" : "Submit payment request"}
+                Submit payment request
               </button>
             </div>
           </div>
@@ -3300,11 +3243,9 @@ function PaymentRequestView({
       {showConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onClick={() => setShowConfirm(false)}>
           <div className="bg-card rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-foreground text-base mb-2">Confirm {claimType === "advance" ? "Advance" : "Full"} Payment Claim</h3>
+            <h3 className="font-bold text-foreground text-base mb-2">Confirm Payment Claim</h3>
             <p className="text-sm text-muted-foreground mb-5">
-              {claimType === "advance"
-                ? `Requesting KSh ${requestedAmount.toLocaleString()} advance for ${course.name}.`
-                : `Requesting remaining payment of KSh ${requestedAmount.toLocaleString()} for ${course.name}.`}
+              Requesting remaining payment of KSh {requestedAmount.toLocaleString()} for {course.name}.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm">Cancel</button>
@@ -3492,12 +3433,14 @@ function CourseDetail({
               <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Amount payable</p>
               <p className="mt-1 text-2xl font-extrabold leading-tight text-[#25476a]">KSh {amountPayable.toLocaleString()}</p>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[11px] font-semibold text-muted-foreground">Advance payable</p>
-                <p className="mt-1 font-mono text-base font-extrabold text-amber-700">KSh {advancePayable.toLocaleString()}</p>
+            {course.locationType !== "googlemeet" && (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold text-muted-foreground">Advance payable</p>
+                  <p className="mt-1 font-mono text-base font-extrabold text-amber-700">KSh {advancePayable.toLocaleString()}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="border-t border-border bg-[#f8fbfe] p-4 sm:p-5 lg:border-l lg:border-t-0">
@@ -3564,7 +3507,7 @@ function StatCards({ courses }: { courses: Course[] }) {
   const outstanding = courses.filter((c) => ["advance_claimed", "full_claimed"].includes(c.claimStatus))
     .reduce((s, c) => s + (c.claimStatus === "full_claimed" ? calcTotalEarning(c) - c.advancePaidAmount : calcAdvanceAmount(c)), 0);
   const paid = courses.filter((c) => c.claimStatus === "approved").reduce((s, c) => s + calcTotalEarning(c), 0);
-  const advPaid = courses.reduce((s, c) => s + c.advancePaidAmount, 0);
+  const advPaid = courses.filter((c) => c.locationType !== "googlemeet").reduce((s, c) => s + c.advancePaidAmount, 0);
   const hours = courses.reduce((s, c) => s + totalHours(c), 0);
 
   const stats = [
