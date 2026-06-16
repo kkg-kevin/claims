@@ -203,7 +203,7 @@ function StudentSessionView({
             </div>
             <div className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5">
               <span className="text-[11px] font-semibold text-muted-foreground">Completed</span>
-              <span className="text-sm font-extrabold text-[#ca8a04]">{completedCount}</span>
+              <span className="text-sm font-extrabold text-[#38aae1]">{completedCount}</span>
             </div>
             <div className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5">
               <span className="text-[11px] font-semibold text-muted-foreground">Cancelled</span>
@@ -236,7 +236,7 @@ function StudentSessionView({
                       <button
                         type="button"
                         onClick={() => updateSession(item.id, { attended: !item.attended })}
-                        className={`inline-flex min-w-[108px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${item.attended ? "border-[#feb139]/20 bg-[#fffbf0] text-[#ca8a04]" : "border-rose-200 bg-rose-50 text-rose-700"}`}
+                        className={`inline-flex min-w-[108px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${item.attended ? "border-[#38aae1]/30 bg-[#38aae1]/10 text-[#38aae1]" : "border-rose-200 bg-rose-50 text-rose-700"}`}
                       >
                         {item.attended ? "Completed" : "Not Completed"}
                       </button>
@@ -284,10 +284,10 @@ function StudentSessionView({
               {sessionSummary.map((item) => (
                 <div
                   key={item.label}
-                  className="flex min-h-8 items-center gap-2 rounded-full border border-[#feb139]/20 bg-[#fffbf0] px-3 py-1"
+                  className="flex min-h-8 items-center gap-2 rounded-full border border-[#38aae1]/30 bg-[#38aae1]/10 px-3 py-1"
                 >
                   <span className="text-[11px] font-semibold text-muted-foreground">{item.label}</span>
-                  <span className="text-sm font-extrabold text-[#ca8a04]">{item.value}</span>
+                  <span className="text-sm font-extrabold text-[#38aae1]">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -355,12 +355,12 @@ function StudentSessionView({
                       <button
                         type="button"
                         onClick={() => toggleAttendance(st.id)}
-                        className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-[#feb139]" : "bg-slate-300"}`}
+                        className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-[#38aae1]" : "bg-slate-300"}`}
                         title={present ? "Mark absent" : "Mark present"}
                       >
                         <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
                       </button>
-                      <p className={`mt-1 text-[10px] font-semibold ${present ? "text-[#ca8a04]" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
+                      <p className={`mt-1 text-[10px] font-semibold ${present ? "text-[#38aae1]" : "text-slate-500"}`}>{present ? "Present" : "Absent"}</p>
                     </td>
 
                     <td className="px-3 py-3 text-center">
@@ -376,7 +376,7 @@ function StudentSessionView({
                     <td className="px-3 py-3 text-center">
                       {rRec ? (
                         <span
-                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${rRec.done ? "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${rRec.done ? "bg-[#38aae1]/10 text-[#38aae1] border border-[#38aae1]/30" : "bg-rose-50 text-rose-600 border border-rose-200"}`}>
                           {rRec.done ? <CheckSquare size={11} /> : <Square size={11} />}
                           {rRec.done ? "Done" : "Pending"}
                         </span>
@@ -479,9 +479,9 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
             <p className="mt-1 text-sm text-muted-foreground">{session.date} · {course.students.length} students</p>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-[#fffbf0] px-3 py-2">
-              <p className="text-base font-extrabold text-[#ca8a04]">{gradedCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-[#ca8a04]/70">Graded</p>
+            <div className="rounded-xl bg-[#38aae1]/10 px-3 py-2">
+              <p className="text-base font-extrabold text-[#38aae1]">{gradedCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#38aae1]/70">Graded</p>
             </div>
             <div className="rounded-xl bg-amber-50 px-3 py-2">
               <p className="text-base font-extrabold text-amber-700">{submittedCount}</p>
@@ -541,7 +541,7 @@ function SessionAssignmentView({ course, sessionId, onUpdate, onBack, onChangeSe
                       <button
                         onClick={() => downloadAssignment(student, rec)}
                         disabled={!canDownload}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#25476a]/15 bg-white px-3 py-2 text-sm font-bold text-[#25476a] hover:border-[#38aae1]/40 hover:bg-[#e8f0f7] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#38aae1] bg-white px-3 py-2 text-sm font-bold text-[#38aae1] hover:bg-[#e8f0f7] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Download size={14} />
                         <span>{canDownload ? "Download" : "Locked"}</span>
@@ -638,9 +638,9 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
             <p className="mt-1 text-sm text-muted-foreground">{session.date} · {course.students.length} students</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="rounded-xl bg-[#fffbf0] px-4 py-2">
-              <p className="text-base font-extrabold text-[#ca8a04]">{doneCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-[#ca8a04]/70">Done</p>
+            <div className="rounded-xl bg-[#38aae1]/10 px-4 py-2">
+              <p className="text-base font-extrabold text-[#38aae1]">{doneCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#38aae1]/70">Done</p>
             </div>
             <div className="rounded-xl bg-rose-50 px-4 py-2">
               <p className="text-base font-extrabold text-rose-600">{pendingCount}</p>
@@ -690,7 +690,7 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
                       <button
                         onClick={() => downloadReport(student, rec)}
                         disabled={!rec.done}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#25476a]/15 bg-white px-3 py-2 text-sm font-bold text-[#25476a] hover:border-[#38aae1]/40 hover:bg-[#e8f0f7] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#38aae1] bg-white px-3 py-2 text-sm font-bold text-[#38aae1] hover:bg-[#e8f0f7] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Download size={14} />
                         <span>{rec.done ? "Download" : "Locked"}</span>
@@ -716,8 +716,8 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
 const RATE: Record<LocationType, number> = { center: 904, home: 904, physical: 904, online: 500, googlemeet: 500 };
 const LOCATION_LABELS: Record<LocationType, string> = { center: "Center", home: "Home", online: "Online", physical: "Physical", googlemeet: "Google Meet" };
 const LOCATION_COLORS: Record<LocationType, string> = {
-  center: "bg-[#25476a] text-white", home: "bg-[#38aae1] text-white",
-  online: "bg-emerald-600 text-white", physical: "bg-violet-600 text-white", googlemeet: "bg-rose-500 text-white",
+  center: "bg-[#25476a] text-white", home: "bg-[#feb139] text-white",
+  online: "bg-[#38aae1] text-white", physical: "bg-[#feb139] text-white", googlemeet: "bg-[#38aae1] text-white",
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -1149,8 +1149,8 @@ function formatPaymentDate(value: string): string {
 function paymentStatusClass(status: PaymentActivityStatus): string {
   const statusClass: Record<PaymentActivityStatus, string> = {
     requested: "bg-blue-50 text-blue-700 border-blue-200",
-    paid: "bg-[#fffbf0] text-[#ca8a04] border-[#feb139]/20",
-    approved: "bg-[#fffbf0] text-[#ca8a04] border-[#feb139]/20",
+    paid: "bg-[#38aae1]/10 text-[#38aae1] border-[#38aae1]/30",
+    approved: "bg-[#38aae1]/10 text-[#38aae1] border-[#38aae1]/30",
     denied: "bg-red-50 text-red-700 border-red-200",
   };
   return statusClass[status];
@@ -1307,7 +1307,7 @@ function AssignmentStatusChip({ status, onClick }: { status: AssignmentStatus; o
   const map: Record<AssignmentStatus, { label: string; cls: string }> = {
     issued: { label: "Issued", cls: "bg-slate-100 text-slate-500 border border-slate-200" },
     submitted: { label: "Submitted", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
-    graded: { label: "Graded", cls: "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" },
+    graded: { label: "Graded", cls: "bg-[#38aae1]/10 text-[#38aae1] border border-[#38aae1]/30" },
   };
   const { label, cls } = map[status];
   return (
@@ -1473,8 +1473,8 @@ function AssignmentDetailModal({ student, assignment, record, onClose, onUpdate 
                 </div>
               )}
               {record.gradedAt && (
-                <div className="bg-[#fffbf0] rounded-xl p-3">
-                  <p className="text-xs text-[#ca8a04] font-semibold">Graded</p>
+                <div className="bg-[#38aae1]/10 rounded-xl p-3">
+                  <p className="text-xs text-[#38aae1] font-semibold">Graded</p>
                   <p className="text-sm font-bold text-foreground mt-0.5">{record.gradedAt}</p>
                 </div>
               )}
@@ -1492,7 +1492,7 @@ function AssignmentDetailModal({ student, assignment, record, onClose, onUpdate 
 
           {/* Actions */}
           {record.status === "issued" && (
-            <button onClick={handleMarkSubmitted} className="w-full bg-[#feb139] text-[#12253a] py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors flex items-center justify-center gap-2">
+            <button onClick={handleMarkSubmitted} className="w-full bg-[#feb139] text-white py-3 rounded-xl font-bold hover:bg-[#e6a817] transition-colors flex items-center justify-center gap-2">
               <Send size={15} /> Mark as Submitted
             </button>
           )}
@@ -1512,7 +1512,7 @@ function AssignmentDetailModal({ student, assignment, record, onClose, onUpdate 
                   className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-input-background text-foreground focus:outline-none focus:ring-2 focus:ring-[#38aae1]/40 resize-none" />
               </div>
               <button onClick={handleGrade} disabled={!score}
-                className="w-full bg-[#25476a] text-white py-3 rounded-xl font-bold hover:bg-[#1a3452] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                className="w-full bg-[#25476a] text-white py-3 rounded-xl font-bold hover:bg-[#1a3166] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
                 <Star size={15} /> Save Grade
               </button>
             </div>
@@ -1593,17 +1593,17 @@ function ReportDetailModal({ student, report, record, onClose, onUpdate }: Repor
               <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#38aae1] text-[#38aae1] font-semibold text-sm hover:bg-[#38aae1]/5 transition-colors">
                 <Download size={14} /> Download
               </button>
-              <button onClick={() => handleSave(true)} className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold text-sm hover:bg-[#1a3452] transition-colors">
+              <button onClick={() => handleSave(true)} className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold text-sm hover:bg-[#1a3166] transition-colors">
                 Save
               </button>
             </div>
           ) : (
             <div className="flex gap-3">
-              <button onClick={() => handleSave(false)} className="flex-1 py-2.5 rounded-xl border border-border text-muted-foreground font-semibold text-sm hover:bg-muted transition-colors">
+              <button onClick={() => handleSave(false)} className="flex-1 py-2.5 rounded-xl border border-[#38aae1] text-[#38aae1] font-semibold text-sm hover:bg-[#38aae1]/10 transition-colors">
                 Save Draft
               </button>
               <button onClick={() => handleSave(true)} disabled={!content.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold text-sm hover:bg-[#1a3452] transition-colors disabled:opacity-40">
+                className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold text-sm hover:bg-[#1a3166] transition-colors disabled:opacity-40">
                 Mark Done
               </button>
             </div>
@@ -1649,7 +1649,7 @@ function AttendanceView({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#38aae1]/10 text-[#38aae1] border border-[#38aae1]/30">
           <span className="font-extrabold">{presentCount}</span> Present marks
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
@@ -1693,11 +1693,11 @@ function AttendanceView({
                           type="button"
                           onClick={() => toggleAttendance(student.id, session.id)}
                           title={present ? "Mark absent" : "Mark present"}
-                          className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-[#feb139]" : "bg-slate-300"}`}
+                          className={`mx-auto flex h-7 w-14 items-center rounded-full p-1 transition-colors ${present ? "bg-[#38aae1]" : "bg-slate-300"}`}
                         >
                           <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${present ? "translate-x-7" : "translate-x-0"}`} />
                         </button>
-                        <p className={`mt-1 text-[10px] font-semibold ${present ? "text-[#ca8a04]" : "text-slate-500"}`}>
+                        <p className={`mt-1 text-[10px] font-semibold ${present ? "text-[#38aae1]" : "text-slate-500"}`}>
                           {present ? "Present" : "Absent"}
                         </p>
                       </td>
@@ -1757,7 +1757,7 @@ function AssignmentsView({
         {[
           { label: "Not Submitted", val: notSubmitted, cls: "bg-slate-100 text-slate-600" },
           { label: "Awaiting Grade", val: pendingGrade, cls: "bg-amber-100 text-amber-700" },
-          { label: "Graded", val: graded, cls: "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" },
+          { label: "Graded", val: graded, cls: "bg-[#38aae1]/10 text-[#38aae1] border border-[#38aae1]/30" },
         ].map((s) => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${s.cls}`}>
             <span className="font-extrabold">{s.val}</span> {s.label}
@@ -1836,7 +1836,7 @@ function AssignmentsView({
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
                     <span><strong className="text-foreground">{submittedCount}</strong>/{total} submitted</span>
-                    <span><strong className="text-[#ca8a04]">{gradedCount}</strong>/{total} graded</span>
+                    <span><strong className="text-[#feb139]">{gradedCount}</strong>/{total} graded</span>
                   </div>
                   <ProgressBar pct={total > 0 ? (gradedCount / total) * 100 : 0} color="#feb139" />
                 </div>
@@ -1906,7 +1906,7 @@ function ReportsView({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#38aae1]/10 text-[#38aae1] border border-[#38aae1]/30">
           <span className="font-extrabold">{doneCount}</span> Done
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-600">
@@ -1961,7 +1961,7 @@ function ReportsView({
                           <td key={session.id} className="px-3 py-3 text-center">
                             <button
                               onClick={() => setDetail({ student, report: rep, record })}
-                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${record.done ? "bg-[#fffbf0] text-[#ca8a04] border border-[#feb139]/20" : "bg-rose-50 text-rose-600 border border-rose-200"}`}
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 ${record.done ? "bg-[#38aae1]/10 text-[#38aae1] border border-[#38aae1]/30" : "bg-rose-50 text-rose-600 border border-rose-200"}`}
                             >
                               {record.done ? <CheckSquare size={11} /> : <Square size={11} />}
                               {record.done ? "Done" : "Pending"}
@@ -2652,7 +2652,7 @@ function InvoiceView({
             </div>
             {pct >= 100 && (
               <button onClick={() => { setClaimType("full"); setShowConfirm(true); }}
-                className="w-full bg-[#25476a] text-white py-3 rounded-xl font-bold hover:bg-[#1a3452] transition-colors text-sm">
+                className="w-full bg-[#25476a] text-white py-3 rounded-xl font-bold hover:bg-[#1a3166] transition-colors text-sm">
                 Claim Remaining — KSh {remainingAfterAdvance.toLocaleString()}
               </button>
             )}
@@ -2680,13 +2680,13 @@ function InvoiceView({
             )}
             {pct >= 50 && pct < 100 && (
               <button onClick={() => { setClaimType("advance"); setShowConfirm(true); }}
-                className="w-full bg-[#feb139] text-[#12253a] py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors text-sm">
+                className="w-full bg-[#feb139] text-white py-3 rounded-xl font-bold hover:bg-[#e6a817] transition-colors text-sm">
                 Claim Advance (30%) — KSh {advanceAmount.toLocaleString()}
               </button>
             )}
             {pct >= 100 && (
               <button onClick={() => { setClaimType("full"); setShowConfirm(true); }}
-                className="w-full bg-[#25476a] text-white py-3 rounded-xl font-bold hover:bg-[#1a3452] transition-colors text-sm">
+                className="w-full bg-[#25476a] text-white py-3 rounded-xl font-bold hover:bg-[#1a3166] transition-colors text-sm">
                 Claim Full Payment — KSh {totalEarning.toLocaleString()}
               </button>
             )}
@@ -2718,7 +2718,7 @@ function InvoiceView({
           <button
             onClick={() => { setClaimType("full"); setShowConfirm(true); }}
             disabled={!canClaimFull(course) || !selectedFile}
-            className="rounded-xl bg-[#25476a] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl bg-[#25476a] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a3166] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Request Full Payment - KSh {remainingAfterAdvance.toLocaleString()}
           </button>
@@ -2762,7 +2762,7 @@ function InvoiceView({
           <button
             onClick={() => openRequestForm("full")}
             disabled={!canClaimFull(course)}
-            className="rounded-xl bg-[#25476a] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl bg-[#25476a] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a3166] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Request Full Payment
           </button>
@@ -2816,7 +2816,7 @@ function InvoiceView({
             <button
               onClick={() => setShowConfirm(true)}
               disabled={!canSubmitRequest}
-              className="self-start rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
+              className="self-start rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3166] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Submit Request
             </button>
@@ -2936,7 +2936,7 @@ function InvoiceView({
                   <button
                     onClick={() => openRequestForm("full")}
                     disabled={!canClaimFull(course)}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#25476a] bg-white px-3 py-2 text-sm font-semibold text-[#25476a] transition-colors hover:bg-[#f8fbfe] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Download size={14} />
                     Request Payment
@@ -2994,13 +2994,13 @@ function InvoiceView({
 
                 <div className="mt-5 flex justify-end gap-3">
                   <button onClick={() => setShowRequestDialog(false)}
-                    className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+                    className="rounded-xl border border-[#38aae1] px-4 py-2.5 text-sm font-semibold text-[#38aae1] hover:bg-[#38aae1]/10">
                     Cancel
                   </button>
                   <button
                     onClick={() => setShowConfirm(true)}
                     disabled={!canSubmitRequest}
-                    className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3166] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Request payment
                   </button>
@@ -3022,11 +3022,11 @@ function InvoiceView({
             </p>
             <div className="flex gap-3">
               <button onClick={() => setShowConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm">
+                className="flex-1 py-2.5 rounded-xl border border-[#38aae1] text-[#38aae1] font-semibold hover:bg-[#38aae1]/10 transition-colors text-sm">
                 Cancel
               </button>
               <button onClick={confirmClaim}
-                className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold hover:bg-[#1a3452] transition-colors text-sm">
+                className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold hover:bg-[#1a3166] transition-colors text-sm">
                 Confirm
               </button>
             </div>
@@ -3221,11 +3221,11 @@ function PaymentRequestView({
             )}
 
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button onClick={() => setClaimType(null)} className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+              <button onClick={() => setClaimType(null)} className="rounded-xl border border-[#38aae1] px-4 py-2.5 text-sm font-semibold text-[#38aae1] hover:bg-[#38aae1]/10">
                 Cancel
               </button>
               <button onClick={() => setShowConfirm(true)} disabled={!canSubmitRequest}
-                className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3452] disabled:cursor-not-allowed disabled:opacity-40">
+                className="rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1a3166] disabled:cursor-not-allowed disabled:opacity-40">
                 Submit payment request
               </button>
             </div>
@@ -3248,8 +3248,8 @@ function PaymentRequestView({
               Requesting remaining payment of KSh {requestedAmount.toLocaleString()} for {course.name}.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-border text-foreground font-semibold hover:bg-muted transition-colors text-sm">Cancel</button>
-              <button onClick={confirmClaim} className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold hover:bg-[#1a3452] transition-colors text-sm">Confirm</button>
+              <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-[#38aae1] text-[#38aae1] font-semibold hover:bg-[#38aae1]/10 transition-colors text-sm">Cancel</button>
+              <button onClick={confirmClaim} className="flex-1 py-2.5 rounded-xl bg-[#25476a] text-white font-semibold hover:bg-[#1a3166] transition-colors text-sm">Confirm</button>
             </div>
           </div>
         </div>
@@ -3452,7 +3452,7 @@ function CourseDetail({
               <button
                 type="button"
                 onClick={() => setIsPaymentOpen(true)}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1a3452]"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25476a] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1a3166]"
               >
                 <Receipt size={16} />
                 Request Payment
@@ -3462,13 +3462,7 @@ function CourseDetail({
         </div>
       </div>
 
-      {/* Eligibility banners */}
-      {pct >= 100 && course.claimStatus === "not_requested" && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
-          <CheckCircle2 size={16} className="text-green-600 flex-shrink-0" />
-          <p className="text-sm text-green-700 font-medium">Course complete - claim full payment from Request Payment.</p>
-        </div>
-      )}
+
       {false && pct >= 50 && pct < 100 && course.claimStatus === "not_requested" && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
           <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
