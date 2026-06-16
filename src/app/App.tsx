@@ -716,8 +716,8 @@ function SessionReportView({ course, sessionId, onUpdate, onBack, onChangeSessio
 const RATE: Record<LocationType, number> = { center: 904, home: 904, physical: 904, online: 500, googlemeet: 500 };
 const LOCATION_LABELS: Record<LocationType, string> = { center: "Center", home: "Home", online: "Online", physical: "Physical", googlemeet: "Google Meet" };
 const LOCATION_COLORS: Record<LocationType, string> = {
-  center: "bg-[#25476a] text-white", home: "bg-[#38aae1] text-white",
-  online: "bg-emerald-600 text-white", physical: "bg-violet-600 text-white", googlemeet: "bg-rose-500 text-white",
+  center: "bg-[#25476a] text-white", home: "bg-[#feb139] text-white",
+  online: "bg-[#38aae1] text-white", physical: "bg-[#feb139] text-white", googlemeet: "bg-[#38aae1] text-white",
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
